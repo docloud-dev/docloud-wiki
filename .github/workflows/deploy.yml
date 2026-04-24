@@ -1,0 +1,15 @@
+name: Trigger Website Build
+on:
+  push:
+    branches: [main, master] # Triggers when you push to either name
+
+jobs:
+  ping-docusaurus:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pinging Docusaurus Repo
+        run: |
+          curl -X POST https://api.github.com/repos/docloud-dev/docloud-docs-public/dispatches \
+          -H "Accept: application/vnd.github.v3+json" \
+          -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+          -d '{"event_type": "wiki_updated"}'
