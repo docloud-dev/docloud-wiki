@@ -4,21 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "1de243ecb0022d77",
+        "id": "82c35aefb9af72de",
         "type": "tabs",
         "children": [
           {
-            "id": "973c3da770e93524",
+            "id": "e0098d00883a6141",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "framework/Modules/Util/IP Manager.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "IP Manager"
+              "title": "New tab"
             }
           }
         ]
@@ -156,13 +152,12 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "framework/Modules/Util/IP Manager.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of IP Manager"
+              "title": "Outline"
             }
           }
         ],
@@ -183,8 +178,11 @@
       "bases:Create new base": false
     }
   },
-  "active": "973c3da770e93524",
+  "active": "e0098d00883a6141",
   "lastOpenFiles": [
+    "docs/framework/Modules/App Manager.md",
+    "docs/Home.md",
+    "docs/README.md",
     "framework/Modules/Util/Date And Time Manager.md",
     "framework/Modules/Util/Common Functions.md",
     "framework/Docloud/Sub 2.md",
