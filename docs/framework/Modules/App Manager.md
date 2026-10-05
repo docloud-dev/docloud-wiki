@@ -1,247 +1,319 @@
+---
+title: App Manager
+sidebar_label: App Manager
+---
+
 # App Manager
 
 Owner: Nuwan Danushka
 
 # Introduction
 
-The AppManager module simplifies application and database management through two main classes: AppManager and AppManagerDatabaseFunctions. AppManager handles tasks like starting and stopping apps, managing user permissions, and retrieving app details. On the other hand, AppManagerDatabaseFunctions facilitates smooth communication with the database, offering functions to create, update, and retrieve data. Together, these classes provide an organized and user-friendly solution for effective application management, promoting reusability and scalability while maintaining a clear distinction between application logic and database interactions.
+The App Manager module is how an app talks to the framework about itself: its tables, its manifest (`<app>.xml`) and the other apps it depends on. It has three classes:
+
+- **`AppManager`**: static methods. Table helpers, schema install and reinit, app discovery, and calls into other apps.
+- **`AppManagerDatabaseFunctions`**: lower-level schema functions (create a table, add or change a column, add keys). These are instance methods. Get an instance with `AppManager::DBFunctions()`.
+- **`AppConfigHandler`**: edits an app's manifest file. Get one with `AppManager::ConfigHandler($app_name)`.
+
+Two rules apply to every `AppManager` table helper:
+
+- **Table names are prefixed with the calling app's name.** `AppManager::insertInToTable('orders', …)` called from a file under `api/apps/myapp/` writes to `myapp_orders`. The app is worked out from the call stack: it's the nearest file under the apps directory. Code that runs outside an app folder gets no app name, and the table becomes `_orders`.
+- **They use the current session's database.** In a multi-tenant setup this is the tenant database. Call `AppManager::useCoreDatabase()` to switch the helpers to the database in the config file, and `AppManager::revertToDefaultDatabaseState()` to switch back.
+
+`AppManagerDatabaseFunctions` methods don't add a prefix. Pass them the full table name, such as `myapp_orders`.
+
+<aside>
+⚠️ Several helpers paste their WHERE values straight into the SQL string: `getRecordsFromTable`, `getRecordFromTable`, `getRecordsLimited`, `getRecordCount`, `deleteFromTable`, `deleteFromTableMultipleWhere`, `getRecordsFromMetaTable`, `deleteMetaTableRecords`, `deleteMetaTableValue`, `selectLikeFromTable`, `customSelectQuery` and `customSelectQuerySingle`. Column and table names are pasted in by every helper. Never pass user input to these helpers. For anything a user can influence, write a DAO that extends `database` and uses bound parameters (see "How to query your app's tables").
+
+</aside>
 
 ---
 
-# AppManager Class
+# How to define your tables
 
----
+Declare tables in the `<createTables>` block of your manifest, `api/apps/myapp/myapp.xml`. The framework creates them when the app is installed and converges them on every reinit.
 
-## Functions For Database Operations
-
-This documentation provides a detailed overview of essential functions within the framework, specifically designed to streamline database operations. Let's delve into the functionality of each crucial function:
-
----
-
-### createTable
-
-Description:
-
-The **`createTable`** function is designed to create tables dynamically by specifying the table name, an array of columns, and optionally, the primary key column.
-
-The **`$ColumnAndDataType`** array should adhere to the following format:
-
-```php
-$ColumnAndDataType = array(
-    "id" => "int(20) NOT NULL AUTO_INCREMENT",
-    "name" => "varchar(255)",
-    // Add more columns as needed
-);
+```xml
+<createTables charset="utf8mb4" collation="utf8mb4_unicode_ci">
+    <table name="orders">
+        <column name="id" type="bigint" size="20" attributes="UNSIGNED" null="false" autoincrement="true" primarykey="true"/>
+        <column name="order_no" type="varchar" size="32" null="false" unique="true"/>
+        <column name="customer_id" type="bigint" size="20" attributes="UNSIGNED" null="false" index="true"/>
+        <column name="status" type="enum" values="'draft','placed','cancelled'" size="'draft','placed','cancelled'" default="draft" null="false"/>
+        <column name="total" type="decimal" size="12,2" default="0" null="false"/>
+        <column name="note" type="text" null="true" charset="utf8mb4" collation="utf8mb4_bin"/>
+        <column name="created_at" type="timestamp" default="CURRENT_TIMESTAMP" null="false"/>
+        <column name="updated_at" type="timestamp" default="CURRENT_TIMESTAMP" on_update="CURRENT_TIMESTAMP" null="false"/>
+        <unique name="customer_order" columns="customer_id,order_no"/>
+    </table>
+    <table name="order_meta" collation="utf8mb4_general_ci">
+        <column name="id" type="bigint" size="20" attributes="UNSIGNED" null="false" autoincrement="true" primarykey="true"/>
+        <column name="order_id" type="bigint" size="20" attributes="UNSIGNED" null="false" index="true"/>
+        <column name="meta_key" type="varchar" size="255" null="false"/>
+        <column name="meta_value" type="longtext" null="true"/>
+        <column name="created_at" type="datetime" null="true"/>
+        <column name="created_by" type="bigint" size="20" attributes="UNSIGNED" null="true"/>
+        <column name="updated_at" type="datetime" null="true"/>
+        <column name="updated_by" type="bigint" size="20" attributes="UNSIGNED" null="true"/>
+        <unique name="order_meta_key" columns="order_id,meta_key"/>
+    </table>
+</createTables>
 ```
 
-Syntax:
+This creates `myapp_orders` and `myapp_order_meta`.
 
-```php
-AppManager::createTable(string $tableName, array $ColumnAndDataType, string $primaryKey = null)
-```
+`<createTables>` and `<table>` attributes:
 
-**Parameters**:
+| Attribute | On | Meaning |
+| --- | --- | --- |
+| `charset`, `collation` | `<createTables>` | Default table charset and collation for every table. |
+| `name` | `<table>` | Table name without the app prefix. Required. |
+| `charset`, `collation` | `<table>` | Override the defaults for this table. |
 
-- **`$tableName`**: The name of the table to be created.
-- **`$ColumnAndDataType`**: An array specifying the columns and their data types.
-- **`$primaryKey`** (optional): The column name is designated as the primary key.
+`<column>` attributes:
 
-**Returns:**
+| Attribute | Meaning |
+| --- | --- |
+| `name` | Column name. Required. |
+| `type` | SQL type: `bigint`, `varchar`, `text`, `decimal`, `enum`, `timestamp` and so on. Required. |
+| `size` | Goes in brackets after the type: `255`, `12,2`. |
+| `values` | Enum value list, used by the install path. See the enum note below. |
+| `attributes` | Raw text placed after the type, such as `UNSIGNED`. |
+| `null` | `true` allows NULL. Anything else means `NOT NULL`. Always set it, see the note below. |
+| `default` | Default value. Numbers, `CURRENT_TIMESTAMP`, `TRUE`, `FALSE` and `NULL` go in unquoted. Anything else is quoted. |
+| `on_update` | Raw `ON UPDATE` expression, usually `CURRENT_TIMESTAMP`. |
+| `autoincrement` | `true` adds `AUTO_INCREMENT`. |
+| `primarykey` | `true` makes this the primary key. One column only. If several columns set it, the last one wins. |
+| `unique` | `true` adds a unique key named `<column>_unique`. |
+| `index` | `true` adds an index named `<column>_index`. |
+| `charset`, `collation` | Column charset and collation. Leave out to inherit from the table. |
 
-- **`true`** if the operation is successful.
-- **`false`** if the operation is not successful.
+`<unique name="…" columns="a,b"/>` inside a `<table>` adds a composite unique key named `<name>_unique`. With no `name`, the key is named after the columns joined by `_`.
 
-This function offers a flexible and efficient means to dynamically create tables, making it an indispensable tool for database schema management within your applications.
+<aside>
+💡 Always set `null` explicitly. A column with no `null` attribute is created `NOT NULL`, but the reinit check reads a missing `null` as nullable, so it re-alters the column on every reinit.
 
----
+</aside>
 
-### insertIntoMetaTable
+<aside>
+💡 For an `enum` column, put the same quoted list in both `values` and `size`. The install path reads `values`. Reinit, `create_table`, `add_column` and `update_column` read `size`.
 
-Description:
-
-The **`insertIntoMetaTable`** function is designed to insert data into metatables. Users need to specify the meta table name, a unique column name, the unique value for that column, and the data to be inserted.
-
-The **`$dataToInsert`** array should follow this format:
-
-```php
-$dataToInsert = array(
-											"contact_name" => 'Thilina',
-											"contact_occupation" => 'CEO',
-											 // Add more data as needed
-									);
-```
-
-Syntax:
-
-```php
-AppManager::insertIntoMetaTable(string $tableName, string $uniqueColumn, string $uniqueValue, array $dataToInsert)
-```
-
-**Parameters**:
-
-- **`$tableName`**: The name of the meta table where data will be inserted.
-- **`$uniqueColumn`**: The unique column name in the meta table.
-- **`$uniqueValue`**: The unique value corresponding to the specified unique column.
-- **`$dataToInsert`**: An array containing the data to be inserted into the meta table.
-
-**Returns:** returns true if success and false if not success
-
-**Returns:**
-
-- **`true`** if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a streamlined approach to insert metadata, making it a valuable asset for managing metadata associated with various tables in your application.
+</aside>
 
 ---
 
-### getRecordsFromMetaTable
+# How to install and reinitialise an app
 
-Description:
+Installing an app from the admin panel calls `AppManager::installSchema($app_name)`. That builds every table in `<createTables>` with `generateTableFromXml()`.
 
-The **`getRecordsFromMetaTable`** function is engineered to retrieve data from meta tables. Users must specify the meta table name, a unique column name, and the unique value for that column.
-
-Syntax:
+Reinitialising an app (Admin panel > Apps > Reinit, or after a system update) calls `AppManager::initialize_app($app_name)`. You can also call it yourself:
 
 ```php
-AppManager::getRecordsFromMetaTable(string $tableName, string $uniqueColumn, string $uniqueValue)
+$result = AppManager::initialize_app('myapp');
 ```
 
-**Parameters**:
+`initialize_app` does this, in order:
 
-- **`$tableName`**: The name of the metatable where data will be retrieved.
-- **`$uniqueColumn`**: The unique column name in the meta table.
-- **`$uniqueValue`**: The unique value corresponding to the specified unique column.
+1. Uses the app name you pass, or the calling app if you pass none.
+2. Converges the tables in `<createTables>` with the database. The next section has the rules.
+3. Seeds the app's `<app_options>` (see [App Options](../Essentials/App%20Options.md)).
+4. Registers permissions. Every permission marked `auto_update="true"` in `<user_permissions>` is added to the admin role in the app, and every one in `<admin_panel_permissions>` is added to the admin panel. This only adds: it never removes a permission an admin granted by hand.
+5. Provisions the roles declared in the manifest's `<roles>` block and their default grants. This only adds. A grant an admin revoked stays revoked.
+6. Downgrades role memberships whose scope no longer exists.
+7. Runs the `<run>` block: each `<script class_name="…" function_name="…" file="…"/>` and `<sql>…</sql>` entry (see `runConfig`).
 
-**Returns:**
-
-- **`Array`** of data if the retrieve is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a streamlined approach to retrieving metadata, making it a valuable asset for managing metadata associated with various tables in your application.
+It returns an array with the keys `roles`, `scopes_pruned` and `scripts_runed`, or `false` if an exception stops it. The array doesn't report which tables or columns changed.
 
 ---
 
-### updateMetaTable
+# How schema changes converge on reinit
 
-Description:
+For each `<table>` in `<createTables>`, `initialize_app` works on `<app>_<name>`:
 
-The **`updateMetaTable`** function is engineered to update data in metatables. It updates existing records if the specified value exists and inserts a new record if it does not.
+- **Missing table**: creates it with its columns, primary key, charset and collation, then adds its unique keys and indexes.
+- **Table collation**: when the table or `<createTables>` sets a `collation` and the live table's collation differs, it runs `ALTER TABLE … DEFAULT CHARSET=… COLLATE=…`. This changes the table default only. Existing columns aren't converted.
+- **Missing column**: adds it at the end of the table with `add_column`.
+- **Existing column**: compares the type, `null`, default and collation with the manifest. If any of them differ, it rewrites the column with `update_column` from the full manifest definition. `AUTO_INCREMENT` on the live column is kept.
+  - The type comparison is lower-case, ignores extra spaces, and strips integer display widths, so `bigint(20) unsigned` matches the `bigint unsigned` that MySQL 8.0.17+ reports. Widths on other types (`varchar(255)`, `decimal(12,2)`) are compared.
+  - The default is compared only when the live column has a default. Adding a default to a column that has none isn't detected on its own.
+  - The collation is compared only when the manifest sets one.
+  - `on_update` and column `charset` aren't compared. They're applied when the column is added, or when one of the checks above triggers a rewrite.
+- **Keys**: adds any column `unique`, table `<unique>` or column `index` key whose name doesn't exist yet.
 
-Syntax:
-
-```php
-AppManager::updateMetaTable(string $tableName, string $uniqueColumn, string $uniqueValue, string $meta_key_column, string $updating_value)
-```
-
-**Parameters**:
-
-- **`$tableName`**: The name of the metatable where data will be retrieved.
-- **`$uniqueColumn`**: The unique column name in the meta table.
-- **`$uniqueValue`**: The unique value corresponding to the specified unique column.
-- **`$meta_key_column`**: The meta key is to be updated in the meta table.
-- **`$updating_value`**: The new value to be set in the specified meta key column.
-
-**Returns:**
-
-- **`true`** if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a streamlined approach to update metadata, seamlessly managing metadata associated with various tables in your application.
+Reinit never drops or renames anything. It doesn't drop tables, columns, indexes or unique keys. It doesn't change the primary key. A column you rename in the manifest is added as a new column, and the old one stays. To remove something, do it yourself with a `<run>` SQL file or script.
 
 ---
 
-### deleteMetaTableRecords
+# How to call another app
 
-Description:
+`AppManager::CreateAppInstance('reports')` returns a new instance of the `reports` app's main class, so your app can call its public methods.
 
-The **`deleteMetaTableRecords`** function is engineered to delete records from meta tables, providing an efficient and streamlined approach to data removal based on a unique key.
+The **target** app decides who may call it, in its own manifest:
 
-Syntax:
-
-```php
-AppManager::deleteMetaTableRecords(string $tableName, string $uniqueColumn, string $uniqueValue)
+```xml
+<!-- api/apps/reports/reports.xml -->
+<app_permissions>
+    <permission app_name="myapp"/>
+</app_permissions>
 ```
 
-**Parameters**:
+To let every app call it, use `allow="all"`:
 
-- **`$tableName`**: The name of the metatable where data will be retrieved.
-- **`$uniqueColumn`**: The unique column name in the meta table.
-- **`$uniqueValue`**: The unique value corresponding to the specified unique column.
+```xml
+<app_permissions allow="all">
+</app_permissions>
+```
 
-**Returns:**
+Then, from code in `myapp`:
 
-- **`true`** if the operation is successful.
-- **`false`** if the operation is not successful.
+```php
+$reports = AppManager::CreateAppInstance('reports');
+if ($reports !== false) {
+    $summary = $reports->monthlySummary('2026-09');
+}
+```
 
-This function provides an efficient and streamlined approach to deleting metadata, making it an invaluable asset for managing metadata associated with various tables in your application.
+The call succeeds only when all of these hold:
+
+- `api/apps/reports/reports.xml` exists and has `<app_register active="true"/>`.
+- It has an `<app_permissions>` block that lists the calling app or has `allow="all"`. The calling app is worked out from the call stack, so make the call from a file inside your app's folder.
+- The app's main class can be found (see "How apps boot").
+
+Otherwise it logs a warning and returns `false`. An empty app name stops the request with `die()`.
+
+<aside>
+⚠️ Write `allow="all"` with an opening and a closing tag, as above. A self-closing `<app_permissions allow="all"/>` counts as an empty block, and every call is refused with "Permissions not found in xml."
+
+</aside>
+
+Each call builds a new object, so the app's `init()` runs again. `runCommonFuntionInApps()` uses the same permission check to call one method on every app.
 
 ---
 
-### deleteMetaTableValue
+# How to autoload app classes
 
-Description:
+Namespaced app classes live under `DoCloud\Api\Apps\`. Declare where they are with an `<autoload>` block in your manifest:
 
-The **`deleteMetaTableValue`** function is engineered to delete a specific record from meta tables, providing an efficient and streamlined approach to data removal based on a unique key and meta key.
-
-Syntax:
-
-```php
-AppManager::deleteMetaTableValue(string $tableName, string $uniqueColumn, string $uniqueValue, string $meta_key_column)
+```xml
+<autoload>
+    <map namespace="MyApp" directory="."/>
+    <map namespace="MyApp\Reports" directory="src/reports"/>
+</autoload>
 ```
 
-**Parameters**:
+- `namespace` is added to the fixed `DoCloud\Api\Apps\` prefix. The first map above covers `DoCloud\Api\Apps\MyApp\…`.
+- `directory` is relative to your app's backend folder, `api/apps/myapp/`. `.` means the folder itself.
+- The longest matching prefix wins. With the maps above, `DoCloud\Api\Apps\MyApp\Reports\Monthly` loads `api/apps/myapp/src/reports/Monthly.php`.
+- Sub-namespaces map to sub-folders, matched case-insensitively. The file name must match the class name exactly, plus `.php`.
 
-- **`$tableName`**: The name of the metatable where data will be retrieved.
-- **`$uniqueColumn`**: The unique column name in the meta table.
-- **`$uniqueValue`**: The unique value corresponding to the specified unique column.
-- **`meta_key_column`**: The meta key associated with the record to be deleted.
-
-**Returns:**
-
-- **`true`** if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a precise and streamlined approach to deleting metadata, making it an invaluable asset for managing metadata associated with various tables in your application.
+Without a map, `DoCloud\Api\Apps\Foo\Bar` loads `api/apps/foo/Bar.php`. That only works when the folder name matches the namespace segment apart from case, so an app folder with underscores needs a map. Classes without a namespace still load the old way, by matching the class name against the `.php` file names in the apps directory.
 
 ---
+
+# How apps boot
+
+On every web, shell and heartbeat request, after the autoloaders are registered, the framework boots the active apps in two phases:
+
+1. It reads every manifest with `<app_register active="true"/>`, along with its dependencies:
+
+   ```xml
+   <dependencies>
+       <app name="reports"/>
+   </dependencies>
+   ```
+
+2. It orders the apps so each app's dependencies come before it. A dependency that is missing or inactive is logged and ignored. A dependency cycle is logged and broken.
+3. It creates each app's main class once. With an `<autoload>` block, the class is `<first map namespace>\<last segment>`, for example `DoCloud\Api\Apps\MyApp\MyApp`. Without one, it's the folder name in StudlyCase (`my_app` becomes `DoCloud\Api\Apps\MyApp\MyApp`). If that class doesn't exist, it falls back to a global class named after the folder, such as `class myapp`. The class must extend `App`.
+4. It calls `register()` on every app, then `boot()` on every app, both in dependency order.
+
+```php
+namespace DoCloud\Api\Apps\MyApp;
+
+class MyApp extends \App
+{
+    public function register(): bool
+    {
+        // Phase 1: set up what other apps may need from you.
+        return true;
+    }
+
+    public function boot(): void
+    {
+        // Phase 2: every active app has run register(), so their bindings are ready.
+    }
+
+    public function init() {}
+
+    public function search(string $search_text) {}
+}
+```
+
+`register()`, `init()` and `search()` are abstract and must be implemented. `boot()` is optional. `init()` runs from the constructor, so it runs on every request and on every `CreateAppInstance` call: keep it cheap. An exception in one app's `register()` or `boot()` is logged and doesn't stop the other apps.
+
+---
+
+# How to query your app's tables
+
+The helpers suit simple reads and writes with values your code controls:
+
+```php
+$id = AppManager::insertInToTable('orders', [
+    'order_no'    => 'A-1001',
+    'customer_id' => 42,
+]);
+
+$order = AppManager::getRecordFromTable('orders', 'id', (string) $id);
+AppManager::updateTable('orders', ['status' => 'placed'], 'id', (string) $id);
+```
+
+`insertInToTable` and `updateTable` bind their values. Most read and delete helpers don't (see the warning in the Introduction).
+
+For anything a user can influence, write a DAO that extends `database` and binds every value. Use the full, prefixed table name:
+
+```php
+class myappDAO extends database
+{
+    public function getOrdersForCustomer(int $customer_id): array
+    {
+        $this->query("SELECT * FROM myapp_orders WHERE customer_id = :customer_id ORDER BY id DESC");
+        $this->bind(':customer_id', $customer_id);
+        return $this->resultset();
+    }
+}
+```
+
+<aside>
+💡 The helpers skip a WHERE value that PHP treats as empty. Passing `'0'` as the value returns or counts every row instead of the rows where the column is 0.
+
+</aside>
+
+---
+
+# AppManager methods
+
+## Table data
 
 ### insertInToTable
 
 Description:
 
-The **`insertInToTable`** function is engineered to insert values into a specified table. Users need to pass the table name and data as an associative array.
-
-The **`$data`** array should follow this format:
-
-- The array key should be the column name
-- The array value should be the value you want to insert
-
-```php
-$data = array(
-    "name" => 'John',
-    "age" => '20',
-    // Add more data as needed
-);
-```
+The **`insertInToTable`** method inserts one row. Values are bound.
 
 Syntax:
 
 ```php
-AppManager::insertInToTable(string $tableName, array $data)
+$id = AppManager::insertInToTable('orders', ['order_no' => 'A-1001', 'customer_id' => 42]);
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$tableName`**: The name of the table where data will be inserted.
-- **`$data`**: An associative array containing the data to be inserted into the table.
+- **`$tableName`**: Table name without the prefix.
+- **`$data`**: Column => value array.
 
-**Returns:**
+**Return Value:**
 
-- **`true`** if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a precise and streamlined approach to insert data into tables, making it an invaluable asset for managing various tables in your application.
+- **`Integer`**: The `lastInsertId`. It's `0` for a table with no auto-increment column.
+- **`false`** on failure.
 
 ---
 
@@ -249,41 +321,34 @@ This function provides a precise and streamlined approach to insert data into ta
 
 Description:
 
-The **`insertMultiple`** function is engineered to insert multiple values into a specified table. Users need to pass the table name and data as an associative array. The array keys should correspond to the column names, and the array values should contain arrays of data to be inserted.
+The **`insertMultiple`** method is meant to insert several rows in one call.
 
-The **`$dataArray`** array should follow this format:
+<aside>
+⚠️ In v0.0.42 it builds one statement with a value group per row, then runs that statement once per row. Each row is inserted once for every row in the batch: three rows give nine. Call `insertInToTable` in a loop, or use a DAO, until this is fixed.
 
-- The **`column`** key’s value should be an array of column names.
-- The **`dataArray`** key’s value should be an array of data to insert.
-
-```php
-$dataArray = array(
-				'column' => array("first_name", "last_name"),
-				'data' => array(
-										array("first_name" => "Kaylee", "last_name" => "Frye"),
-									  array("first_name" => "Jayne", "last_name" => "Cobb"),
-										array("first_name" => "Jayne", "last_name" => "Cobb")
-									)
-					);
-```
+</aside>
 
 Syntax:
 
 ```php
-AppManager::insertMultiple(string $tableName, array $dataArray)
+$id = AppManager::insertMultiple('orders', [
+    'column' => ['order_no', 'customer_id'],
+    'data'   => [
+        ['order_no' => 'A-1001', 'customer_id' => 42],
+        ['order_no' => 'A-1002', 'customer_id' => 43],
+    ],
+]);
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$tableName`**: The name of the table where data will be inserted.
-- **`$dataArray`**: An associative array containing the data to be inserted into the table. It should have a 'column' key with an array of column names and a 'data' key with an array of arrays containing the data.
+- **`$tableName`**: Table name without the prefix.
+- **`$dataArray`**: `column` is the column list. `data` is a list of column => value rows.
 
-**Returns:**
+**Return Value:**
 
-- **`true`** if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a precise and streamlined approach to batch data insertion into tables, making it an invaluable asset for managing various tables in your application.
+- **`Integer`**: The `lastInsertId`.
+- **`false`** on failure.
 
 ---
 
@@ -291,182 +356,24 @@ This function provides a precise and streamlined approach to batch data insertio
 
 Description:
 
-The **`updateTable`** function is engineered to update specific record values in a table. Users need to pass the table name, data, and criteria for updating records.
-
-The **`$data`** array should follow this format:
-
-- The array key should be the column name
-- The array value should be the value you want to update
-
-```php
-$data = array(
-    "name" => 'John',
-    "age" => '20',
-    // Add more data as needed
-);
-```
+The **`updateTable`** method updates the rows where one column equals a value. Values are bound.
 
 Syntax:
 
 ```php
-AppManager::updateTable(string $tableName, array $data, string $where_column_name, string $where_value)
+$ok = AppManager::updateTable('orders', ['status' => 'placed'], 'id', '15');
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$tableName`**: The name of the metatable where data will be retrieved.
-- **`$uniqueColumn`**: The unique column name in the meta table.
-- **`$where_column_name`**:  The column name for the WHERE clause.
-- **`$where_value`**: The value to be matched in the WHERE clause.
+- **`$tableName`**: Table name without the prefix.
+- **`$data`**: Column => new value array.
+- **`$where_column_name`**: Column for the WHERE clause.
+- **`$where_value`**: Value to match.
 
-**Returns:**
+**Return Value:**
 
-- **`true`** if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a precise and streamlined approach to update table records, making it an invaluable asset for managing tables in your application.
-
----
-
-### addPrimaryKeyToTable
-
-Description:
-
-The **`addPrimaryKeyToTable`** function is engineered to add a primary key to a specified table.
-
-Syntax:
-
-```php
-AppManager::addPrimaryKeyToTable(string $table, string $primarykeycolumn)
-```
-
-**Parameters**:
-
-- **`$tableName`**: The name of the table where the primary key will be added.
-- **`$primarykeycolumn`**: The name of the primary key column to be added to the table.
-
-**Returns:**
-
-- **`true`** if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a precise and streamlined approach to adding the primary key to the table. making it an invaluable asset for managing metadata associated with various tables in your application.
-
----
-
-### deleteFromTable
-
-Description:
-
-The `deleteFromTable` function is engineered to delete records from the specified table based on a provided condition.
-
-Syntax:
-
-```php
-AppManager::deleteFromTable(string $tableName, string $where_column_name, string $where_value)
-```
-
-**Parameters**:
-
-- **`$tableName`**: The name of the table.
-- **`$where_column_name`**: The column name for the WHERE clause.
-- **`$where_value`**: The value to be matched in the WHERE clause.
-
-**Returns:**
-
-- **`true`** if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a precise and streamlined approach to deleting records from the table. making it an invaluable asset for managing tables in your application.
-
----
-
-### deleteFromTableMultipleWhere
-
-Description:
-
-The **`deleteFromTableMultipleWhere`** function is engineered to delete records from the specified table based on multiple conditions.
-
-The **`$data`** array should follow this format:
-
-- The array key should be the column name
-- The array value should be the matching value you want to delete
-
-```php
-$where_columns_n_values = array(
-    "type" => 'animals',
-    "category" => 'cats',
-    // Add more data as needed
-);
-```
-
-Syntax:
-
-```php
-AppManager::deleteFromTableMultipleWhere(string $tableName, array $where_columns_n_values)
-```
-
-**Parameters**:
-
-- **`$tableName`**: The name of the table.
-- **`$where_columns_n_values:`** An associative array containing column names as keys and corresponding values as values, representing the conditions for deletion.
-
-**Returns:**
-
-- **`true`** if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a precise and streamlined approach to deleting records from a table based on multiple conditions, making it an invaluable asset for managing tables in your application.
-
----
-
-### dropTable
-
-Description:
-
-The **`dropTable`** function is engineered to drop the specified table from the database.
-
-Syntax:
-
-```php
-AppManager::dropTable(string $tableName)
-```
-
-**Parameters**:
-
-- **`$tableName`**: The name of the table will be dropped.
-
-**Returns:**
-
-- **`true`** if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a precise and streamlined approach to drop a table, making it an invaluable asset for managing tables in your application.
-
----
-
-### emptyTable
-
-Description:
-
-The **`emptyTable`** function is engineered to remove all data from the specified table, effectively emptying its contents.
-
-Syntax:
-
-```php
-AppManager::emptyTable(string $tableName)
-```
-
-**Parameters**:
-
-- **`$tableName`**: The name of the table from which all data will be removed.
-
-**Returns:**
-
-- **`true`** if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a precise and streamlined approach to empty the data from a table, making it an invaluable asset for managing tables in your application.
+- **`Boolean`**: `true` if the statement ran, even when no row matched.
 
 ---
 
@@ -474,60 +381,32 @@ This function provides a precise and streamlined approach to empty the data from
 
 Description:
 
-The **`getRecordsFromTable`** function is engineered to retrieve values from the specified table. Users can specify conditions for retrieval, select specific columns, and opt for distinct values.
+The **`getRecordsFromTable`** method returns rows, optionally filtered by one column and sorted.
+
+<aside>
+⚠️ Don't combine a WHERE pair with `$orderby`. The method puts the `ORDER BY` after the `;` that ends the SELECT, so the sort isn't applied.
+
+</aside>
 
 Syntax:
 
 ```php
-AppManager::getRecordsFromTable(string $tableName, string $where_column_name = null, string $where_value = null, array $columns = null, bool $distinct = false)
+$rows = AppManager::getRecordsFromTable('orders', 'customer_id', '42', ['id', 'order_no'], false, null, true);
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$tableName`**: The name of the table from which data will be retrieved.
-- **`$whereColumnName`**: The column name for the WHERE clause (optional).
-- **`$whereValue`**: The value to be matched in the WHERE clause (optional).
-- **`$columns`**: An array of column names to retrieve (optional).
-- **`$distinct`**: Flag to indicate if distinct values should be retrieved (default is **`false`**).
+- **`$tableName`**: Table name without the prefix.
+- **`$where_column_name`**, **`$where_value`** (optional): Filter. Both must be non-empty. The value isn't bound.
+- **`$columns`** (optional): Columns to return. Default all.
+- **`$distinct`** (optional): `true` for `SELECT DISTINCT`.
+- **`$orderby`** (optional): Column to sort by.
+- **`$latestrecord`** (optional): `true` (default) sorts `DESC`, `false` sorts `ASC`.
 
-**Returns:**
+**Return Value:**
 
-- An `array` of data if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a precise and streamlined approach to retrieving data from a table, making it an invaluable asset for managing tables in your application.
-
----
-
-### getRecordsLimited
-
-Description:
-
-The **`getRecordsLimited`** function is engineered to retrieve values from the specified table with pagination support. Users can specify conditions for retrieval, select specific columns, and opt for distinct values.
-
-Syntax:
-
-```php
-AppManager::getRecordsLimited(string $tableName, int $page, int $recordsPerPage, string $whereValue = null, string $whereColumnName = null, array $columns = null, $orderBy = null, $latestRecord = true)
-```
-
-**Parameters**:
-
-- **`$tableName`**: The name of the table from which data will be retrieved.
-- **`$page`**: The current page number for paginated retrieval.
-- **`$recordsPerPage`**: The number of records to be retrieved per page.
-- **`$whereColumnName`**: The column name for the WHERE clause (optional).
-- **`$whereValue`**: The value to be matched in the WHERE clause (optional).
-- **`$columns`**: An array of column names to retrieve (optional).
-- **`$orderBy`**: The column by which the result should be ordered (optional).
-- **`$latestRecord`**: Flag to indicate if the latest record should be retrieved first (default is **`true`**).
-
-**Returns:**
-
-- An `array` of data if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a precise and streamlined approach to paginated retrieval of data from a table, making it an invaluable asset for managing tables in your application.
+- **`Array`**: List of rows.
+- **`false`** when there are no rows or on error.
 
 ---
 
@@ -535,114 +414,56 @@ This function provides a precise and streamlined approach to paginated retrieval
 
 Description:
 
-The **`getRecordFromTable`** function is engineered to retrieve values from the specified table. Users can specify conditions for retrieval, select specific columns, and opt for distinct values.
+The **`getRecordFromTable`** method returns the first matching row.
 
 Syntax:
 
 ```php
-AppManager::getRecordFromTable(string $tableName, string $where_column_name = null, string $where_value = null, array $columns = null, bool $distinct = false)
+$row = AppManager::getRecordFromTable('orders', 'id', '15');
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$tableName`**: The name of the table from which data will be retrieved.
-- **`$whereColumnName`**: The column name for the WHERE clause (optional).
-- **`$whereValue`**: The value to be matched in the WHERE clause (optional).
-- **`$columns`**: An array of column names to retrieve (optional).
-- **`$distinct`**: Flag to indicate if distinct values should be retrieved (default is **`false`**).
+- Same as the first five parameters of `getRecordsFromTable`. The value isn't bound.
 
-**Returns:**
+**Return Value:**
 
-- An `array` of data if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a precise and streamlined approach to retrieving a single record from a table, making it an invaluable asset for managing tables in your application.
+- **`Array`**: One row.
+- **`false`** when there's no row or on error.
 
 ---
 
-### selectLikeFromTable
+### getRecordsLimited
 
 Description:
 
-The **`selectLikeFromTable`** function is engineered to search for a specified pattern in a column of a table. Users can specify conditions for retrieval, select specific columns, and opt for distinct values.
+The **`getRecordsLimited`** method returns one page of rows. Note the order of the WHERE parameters: value first, then column.
+
+<aside>
+⚠️ In v0.0.42 the WHERE clause is missing its closing quote, so any call with a WHERE pair fails and returns `false`. Calls without a filter work.
+
+</aside>
 
 Syntax:
 
 ```php
-AppManager::selectLikeFromTable(string $tableName, string $where, string $like, array $columns = null, $distinct = false)
+$rows = AppManager::getRecordsLimited('orders', 2, 25, null, null, null, 'id', true);
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$tableName`**: The name of the table from which data will be retrieved.
-- **`$where`**: The column name for the WHERE clause.
-- **`$like`**: The pattern to search for in the specified column.
-- **`$columns`**: An array of column names to retrieve (optional).
-- **`$distinct`**: Flag to indicate if distinct values should be retrieved (default is **`false`**).
+- **`$tableName`**: Table name without the prefix.
+- **`$page`**: Page number, starting at 1.
+- **`$records_per_page`**: Rows per page.
+- **`$where_value`**, **`$where_column_name`** (optional): Filter. Broken, see above.
+- **`$columns`** (optional): Columns to return.
+- **`$orderby`** (optional): Column to sort by.
+- **`$latestrecord`** (optional): `true` (default) for `DESC`.
 
-**Returns:**
+**Return Value:**
 
-- An `array` of data if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a precise and streamlined approach to retrieve records based on a specified pattern in a column, making it an invaluable asset for managing tables in your application.
-
----
-
-### customSelectQuery
-
-Description:
-
-The **`customSelectQuery`** function is engineered to execute custom SELECT queries on a specified table. It offers flexibility by allowing users to define custom SELECT, WHERE, and JOIN clauses. Additionally, users can choose to retrieve a single result or multiple results based on the query.
-
-Syntax:
-
-```php
-AppManager::customSelectQuery(string $tableName, string $select, string $where = null, string $join = null, bool $getSingle = false)
-```
-
-**Parameters**:
-
-- **`$tableName`**: The name of the table from which data will be retrieved.
-- **`$select`**: Custom SELECT string.
-- **`$where`**: Custom WHERE string (optional).
-- **`$join`**: Custom JOIN string (optional).
-- **`$getSingle`**: Pass **`true`** to retrieve a single result (default is **`false`**).
-
-**Returns:**
-
-- An `array` of data if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a precise and streamlined approach to executing custom SELECT queries, making it an invaluable asset for managing tables in your application.
-
----
-
-### customSelectQuerySingle
-
-Description:
-
-The **`customSelectQuerySingle`** function is engineered to execute custom SELECT queries on a specified table, allowing users to define custom SELECT, WHERE, and JOIN clauses. This function is optimized for retrieving a single result based on the query.
-
-Syntax:
-
-```php
-AppManager::customSelectQuerySingle(string $tableName, string $select, string $where = null, string $join = null)
-```
-
-**Parameters**:
-
-- **`$tableName`**: The name of the table from which data will be retrieved.
-- **`$select`**: Custom SELECT string.
-- **`$where`**: Custom WHERE string (optional).
-- **`$join`**: Custom JOIN string (optional).
-
-**Returns:**
-
-- An `array` of data if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a precise and streamlined approach to executing custom SELECT queries and retrieving a single result, making it an invaluable asset for managing tables in your application.
+- **`Array`**: List of rows.
+- **`false`** when there are no rows or on error.
 
 ---
 
@@ -650,24 +471,152 @@ This function provides a precise and streamlined approach to executing custom SE
 
 Description:
 
-The **`getRecordCount`** function is engineered to efficiently retrieve the record count of a specified table.
+The **`getRecordCount`** method counts rows, optionally where one column equals a value.
 
 Syntax:
 
 ```php
-AppManager::getRecordCount(string $tableName)
+$count = AppManager::getRecordCount('orders', 'status', 'placed')['count'];
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$tableName`**: The name of the table from which data will be retrieved.
+- **`$tableName`**: Table name without the prefix.
+- **`$where_column`**, **`$where_value`** (optional): Filter. The value isn't bound.
 
-**Returns:**
+**Return Value:**
 
-- An `array` value represents the record count if the operation is successful.
-- **`false`** if the operation is not successful.
+- **`Array`**: `['count' => n]`.
+- **`false`** on error.
 
-This function provides a precise and streamlined approach to retrieving the record count of a table, making it an invaluable asset for managing tables in your application.
+---
+
+### selectLikeFromTable
+
+Description:
+
+The **`selectLikeFromTable`** method returns rows where a column matches a `LIKE` pattern. Include the `%` wildcards yourself. The pattern isn't bound.
+
+Syntax:
+
+```php
+$rows = AppManager::selectLikeFromTable('orders', 'order_no', 'A-10%');
+```
+
+**Parameters:**
+
+- **`$tableName`**: Table name without the prefix.
+- **`$where`**: Column to search.
+- **`$like`**: Pattern.
+- **`$columns`** (optional): Columns to return.
+- **`$distinct`** (optional): `true` for `SELECT DISTINCT`.
+
+**Return Value:**
+
+- **`Array`**: List of rows.
+- **`false`** when there are no rows or on error.
+
+---
+
+### customSelectQuery
+
+Description:
+
+The **`customSelectQuery`** method runs `SELECT <select> FROM <app>_<table> <join> WHERE <where>` with the fragments you pass. Only the main table is prefixed. Name joined tables in full.
+
+<aside>
+⚠️ The fragments are HTML-escaped before use, so `<`, `>` and `&` become `&lt;`, `&gt;` and `&amp;` and the query fails. Use `BETWEEN`, or a DAO, for range conditions.
+
+</aside>
+
+Syntax:
+
+```php
+$rows = AppManager::customSelectQuery('orders', 'id, order_no', "status = 'placed'", null, false);
+```
+
+**Parameters:**
+
+- **`$tableName`**: Table name without the prefix.
+- **`$select`**: Column list.
+- **`$where`** (optional): WHERE condition, without the keyword.
+- **`$join`** (optional): JOIN clause.
+- **`$getSingle`** (optional): `true` returns only the first row.
+
+**Return Value:**
+
+- **`Array`**: Rows, or one row with `$getSingle`.
+- **`false`** when there are no rows or on error.
+
+---
+
+### customSelectQuerySingle
+
+Description:
+
+The **`customSelectQuerySingle`** method is `customSelectQuery` with `$getSingle` set to `true`.
+
+Syntax:
+
+```php
+$row = AppManager::customSelectQuerySingle('orders', 'MAX(total) AS top');
+```
+
+**Parameters:**
+
+- **`$tableName`**, **`$select`**, **`$where`**, **`$join`**: As for `customSelectQuery`.
+
+**Return Value:**
+
+- **`Array`**: One row.
+- **`false`** when there's no row or on error.
+
+---
+
+### deleteFromTable
+
+Description:
+
+The **`deleteFromTable`** method deletes the rows where one column equals a value. The value isn't bound.
+
+Syntax:
+
+```php
+$ok = AppManager::deleteFromTable('orders', 'id', '15');
+```
+
+**Parameters:**
+
+- **`$tableName`**: Table name without the prefix.
+- **`$where_column_name`**: Column to match.
+- **`$where_value`**: Value to match.
+
+**Return Value:**
+
+- **`Boolean`**: `true` if the statement ran.
+
+---
+
+### deleteFromTableMultipleWhere
+
+Description:
+
+The **`deleteFromTableMultipleWhere`** method deletes rows that match every column => value pair (joined with `AND`). Values aren't bound. An empty array makes the query fail.
+
+Syntax:
+
+```php
+$ok = AppManager::deleteFromTableMultipleWhere('order_meta', ['order_id' => '15', 'meta_key' => 'gift_note']);
+```
+
+**Parameters:**
+
+- **`$tableName`**: Table name without the prefix.
+- **`$where_columns_n_values`**: Column => value array.
+
+**Return Value:**
+
+- **`Boolean`**: `true` if the statement ran.
 
 ---
 
@@ -675,25 +624,23 @@ This function provides a precise and streamlined approach to retrieving the reco
 
 Description:
 
-The **`checkRecordExistById`** function is engineered to efficiently verify the existence of a record in a specified table based on its ID.
+The **`checkRecordExistById`** method checks for a row by its `id` column.
 
 Syntax:
 
 ```php
-AppManager::checkRecordExistById(string $tableName, int $id)
+$exists = AppManager::checkRecordExistById('orders', 15) === 1;
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$tableName`**: The name of the table from which data will be retrieved.
-- **`$id`**: The ID of the record to be checked for existence.
+- **`$tableName`**: Table name without the prefix.
+- **`$id`**: The id.
 
-**Returns:**
+**Return Value:**
 
-- An integer value (1) represents the record that exists.
-- **`false`** if the record does not exist or if the operation is not successful.
-
-This function provides a precise and streamlined approach to verifying the existence of a record in a table based on its ID, making it an invaluable asset for managing tables in your application.
+- **`Integer`**: `1` if the row exists, `0` if not.
+- **`false`** on error.
 
 ---
 
@@ -701,27 +648,50 @@ This function provides a precise and streamlined approach to verifying the exist
 
 Description:
 
-The **`checkRecordExistByIdnKey`** function stands as an advanced tool in our framework, providing an efficient solution for verifying the existence of a record in a specified table based on both its ID and a custom key column. This comprehensive guide dissects the purpose, syntax, and optimal usage of this essential function.
+The **`checkRecordExistByIdnKey`** method checks for a row by `id` plus one other column. Both values are bound.
 
 Syntax:
 
 ```php
-AppManager::checkRecordExistByIdnKey(string $tableName, int $id, $keyColumn, $keyValue)
+$exists = AppManager::checkRecordExistByIdnKey('orders', 15, 'customer_id', '42');
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$tableName`**: The name of the table from which data will be retrieved.
-- **`$id`**: The ID of the record to be checked for existence.
-- **`$keyColumn`**: The custom key column to be checked.
-- **`$keyValue`**: The value of the custom key column to be checked.
+- **`$tableName`**: Table name without the prefix.
+- **`$id`**: The id.
+- **`$keyColumn`**, **`$keyValue`**: Second column and its value.
 
-**Returns:**
+**Return Value:**
 
-- An integer value (1) represents the record that exists.
-- **`false`** if the record does not exist or if the operation is not successful.
+- **`Integer`**: `1` or `0`.
+- **`false`** on error.
 
-This function provides a precise and streamlined approach to verifying the existence of a record in a table based on its ID and a custom key column, making it an invaluable asset for managing tables in your application.
+---
+
+### checkRecordExistByColumnnValue
+
+Description:
+
+The **`checkRecordExistByColumnnValue`** method checks whether a row exists where `$name_column` equals `$option_name` (bound). With `$check_value`, it also requires `$value_column` to be not NULL. An empty string still counts as a value.
+
+Syntax:
+
+```php
+$has = AppManager::checkRecordExistByColumnnValue('settings', 'option_name', 'currency', true, 'option_value');
+```
+
+**Parameters:**
+
+- **`$table_name`**: Table name without the prefix.
+- **`$name_column`**: Column to match.
+- **`$option_name`**: Value to match.
+- **`$check_value`** (optional): `true` to also check `$value_column`.
+- **`$value_column`** (optional): Column that must hold a value.
+
+**Return Value:**
+
+- **`Boolean`**: `true` if a row matches.
 
 ---
 
@@ -729,182 +699,295 @@ This function provides a precise and streamlined approach to verifying the exist
 
 Description:
 
-The **`getNextAutoIncrementID`** function is engineered to efficiently retrieve the next auto-increment ID of a specified table.
-
-Syntax:
-
-```php
-AppManager::getNextAutoIncrementID($table_name)
-```
-
-**Parameters**:
-
-- **`$tableName`**: The name of the table from which data will be retrieved.
-
-**Returns:**
-
-- An `array` containing the value representing the next auto-increment ID if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a precise and streamlined approach to retrieving the next auto-increment ID of a table, making it an invaluable asset for managing tables in your application.
-
----
-
----
-
-## Functions For App Operations
-
-This documentation outlines key functions within our framework, tailored to optimize various app operations. Each function is meticulously crafted to enhance efficiency and streamline essential tasks. Explore the detailed descriptions and usage syntax below.
-
----
-
-### getRegistered_apps
-
-Description:
-
-The `getRegistered_apps` function retrieves registered apps from the system configuration file.
-
-Syntax:
-
-```php
-AppManager::getRegistered_apps()
-```
-
-**Returns:**
-
-- An array containing registered system apps.
-- **`false`** if the operation is not successful.
+The **`getNextAutoIncrementID`** method is meant to return a table's next `AUTO_INCREMENT` value. It doesn't add the app prefix and it reads the database named in the config file.
 
 <aside>
-💡 Apps are automatically registered to configuration when the app instance is created.
-
-</aside>
-
-This function provides a precise and streamlined approach to retrieving registered apps in the configuration, making it an invaluable asset for managing apps in your application.
-
----
-
-### register
-
-Description:
-
-The **`register`** function is used to register an app in the system configuration.
-
-Syntax:
-
-```php
-AppManager::register($app_name, $active)
-```
-
-**Parameters**:
-
-- **`$app_name`:** The name of the app to be registered.
-
-**Returns:**
-
-- void
-
-This function provides a precise and streamlined approach to save and register the app on the configuration, making it an invaluable asset for managing apps in your application.
-
----
-
-### CreateAppInstance
-
-Description:
-
-The **`CreateAppInstance`** function is employed to instantiate an app.
-
-Syntax:
-
-```php
-AppManager::CreateAppInstance(string $AppName)
-```
-
-**Parameters**:
-
-- **`$app_name`:** The name of the app to be create instence.
-
-**Returns:**
-
-- An app object upon successful operation.
-- **`false`** if the operation is not successful.
-
-This function offers a straightforward and efficient way to create an instance of an app.
-
----
-
-### checkIfAppExist
-
-Description:
-
-The `checkIfAppExist` function is utilized to verify if an app exists in the system.
-
-Syntax:
-
-```php
-AppManager::checkIfAppExist(string $appName)
-```
-
-**Parameters**:
-
-- **`$app_name`:** The name of the app to check for existence.
-
-**Returns:**
-
-- **`true`** if the app exists.
-- **`false`** if the app does not exist.
-
-This function provides a straightforward and efficient way to check whether an app exists in the system.
-
----
-
-### getAppPermission
-
-Description:
-
-The **`getAppPermission`** function is created to retrieve an app's permissions for internal app communications.
-
-Syntax:
-
-```php
-AppManager::getAppPermission(string $app_name)
-```
-
-**Parameters**:
-
-- **`$app_name`:** The name of the app
-
-**Returns:**
-
-- An array of app names allowed for communication with other apps.
-- **`false`** if the app does not exist.
-
-This function offers a straightforward and efficient way to retrieve app permissions for internal communications,
-
----
-
-### createTablesfromxml
-
-Description:
-
-The **`createTablesfromxml`** function generates tables for the specified app if they do not already exist. The table definitions are taken from the app's **`config.xml`** file.
-
-<aside>
-💡 This function creates tables for the app calling the function.
+⚠️ In v0.0.42 it throws a `TypeError` whenever the table exists, because it returns the result row where its signature promises an integer. Don't use it.
 
 </aside>
 
 Syntax:
 
 ```php
-AppManager::createTablesfromxml()
+$next = AppManager::getNextAutoIncrementID('myapp_orders');
 ```
 
-**Returns:**
+**Parameters:**
 
-- void
+- **`$table_name`**: Full table name.
 
-This function provides a straightforward and efficient way to generate tables for an app based on its **`config.xml`** file.
+**Return Value:**
+
+- **`false`** if the table isn't found. Otherwise it throws, see above.
+
+---
+
+## Meta tables
+
+Meta tables store key/value rows against a parent record: a parent id column, `meta_key` and `meta_value`. `order_meta` in the XML example is one.
+
+### insertIntoMetaTable
+
+Description:
+
+The **`insertIntoMetaTable`** method inserts one row per key in `$dataToInsert`. Values are bound. It doesn't check for existing keys: use `updateMetaTable` to upsert.
+
+Syntax:
+
+```php
+$ok = AppManager::insertIntoMetaTable('order_meta', 'order_id', '15', ['gift_note' => 'Happy birthday', 'channel' => 'web']);
+```
+
+**Parameters:**
+
+- **`$tableName`**: Meta table name without the prefix.
+- **`$uniqueColumn`**: Parent id column.
+- **`$uniqueValue`**: Parent id.
+- **`$dataToInsert`**: meta_key => meta_value array.
+
+**Return Value:**
+
+- **`Boolean`**: `true` on success.
+
+---
+
+### getRecordsFromMetaTable
+
+Description:
+
+The **`getRecordsFromMetaTable`** method returns every key for one parent. The parent id isn't bound.
+
+Syntax:
+
+```php
+$meta = AppManager::getRecordsFromMetaTable('order_meta', 'order_id', '15');
+// ['gift_note' => 'Happy birthday', 'channel' => 'web']
+```
+
+**Parameters:**
+
+- **`$tableName`**, **`$uniqueColumn`**, **`$uniqueValue`**: As for `insertIntoMetaTable`.
+
+**Return Value:**
+
+- **`Array`**: meta_key => meta_value.
+- **`false`** when there are no rows or on error.
+
+---
+
+### updateMetaTable
+
+Description:
+
+The **`updateMetaTable`** method sets one key for one parent: it updates the row if the key exists and inserts it if not. Values are bound.
+
+The table must have `updated_by` and `created_by` columns. The method always writes `$modifier` to `updated_by` on update and to `created_by` on insert. When you pass `$current_datetime`, it also writes `updated_at` on update and `created_at` on insert.
+
+Syntax:
+
+```php
+$ok = AppManager::updateMetaTable('order_meta', 'order_id', '15', 'gift_note', 'Congrats', $now, $user_id);
+```
+
+**Parameters:**
+
+- **`$tableName`**, **`$uniqueColumn`**, **`$uniqueValue`**: As for `insertIntoMetaTable`.
+- **`$meta_key_column`**: The meta key.
+- **`$updating_value`**: The new value.
+- **`$current_datetime`** (optional): Timestamp for `updated_at`/`created_at`.
+- **`$modifier`** (optional, `int`, default `0`): User id for `updated_by`/`created_by`.
+
+**Return Value:**
+
+- **`Boolean`**: `true` on success.
+
+---
+
+### deleteMetaTableRecords
+
+Description:
+
+The **`deleteMetaTableRecords`** method deletes every key for one parent. The parent id isn't bound.
+
+Syntax:
+
+```php
+$ok = AppManager::deleteMetaTableRecords('order_meta', 'order_id', '15');
+```
+
+**Parameters:**
+
+- **`$tableName`**, **`$uniqueColumn`**, **`$uniqueValue`**: As for `insertIntoMetaTable`.
+
+**Return Value:**
+
+- **`Boolean`**: `true` if the statement ran.
+
+---
+
+### deleteMetaTableValue
+
+Description:
+
+The **`deleteMetaTableValue`** method deletes one key for one parent. Neither value is bound.
+
+Syntax:
+
+```php
+$ok = AppManager::deleteMetaTableValue('order_meta', 'order_id', '15', 'gift_note');
+```
+
+**Parameters:**
+
+- **`$tableName`**, **`$uniqueColumn`**, **`$uniqueValue`**: As for `insertIntoMetaTable`.
+- **`$meta_key_column`**: The meta key to delete.
+
+**Return Value:**
+
+- **`Boolean`**: `true` if the statement ran.
+
+---
+
+## Table structure
+
+### createTable
+
+Description:
+
+The **`createTable`** method runs `CREATE TABLE IF NOT EXISTS <app>_<name>` from a column => definition array. Prefer `<createTables>`, which reinit keeps in step.
+
+Syntax:
+
+```php
+$ok = AppManager::createTable('audit', [
+    'id'      => 'bigint UNSIGNED NOT NULL AUTO_INCREMENT',
+    'message' => 'text NULL',
+], 'id');
+```
+
+**Parameters:**
+
+- **`$tableName`**: Table name without the prefix.
+- **`$ColumnAndDataType`**: Column => SQL definition.
+- **`$primaryKey`** (optional): Primary key column.
+
+**Return Value:**
+
+- **`Boolean`**: `true` on success.
+
+---
+
+### addPrimaryKeyToTable
+
+Description:
+
+The **`addPrimaryKeyToTable`** method adds a primary key to a table.
+
+Syntax:
+
+```php
+$ok = AppManager::addPrimaryKeyToTable('audit', 'id');
+```
+
+**Parameters:**
+
+- **`$table`**: Table name without the prefix.
+- **`$primary_key_column`**: Column, or comma-separated columns.
+
+**Return Value:**
+
+- **`Boolean`**: `true` on success.
+
+---
+
+### emptyTable
+
+Description:
+
+The **`emptyTable`** method truncates a table, which also resets its auto-increment counter.
+
+Syntax:
+
+```php
+$ok = AppManager::emptyTable('audit');
+```
+
+**Parameters:**
+
+- **`$tableName`**: Table name without the prefix.
+
+**Return Value:**
+
+- **`Boolean`**: `true` if the statement ran.
+
+---
+
+### dropTable
+
+Description:
+
+The **`dropTable`** method drops a table. If it's still in `<createTables>`, the next reinit creates it again.
+
+Syntax:
+
+```php
+$ok = AppManager::dropTable('audit');
+```
+
+**Parameters:**
+
+- **`$tableName`**: Table name without the prefix.
+
+**Return Value:**
+
+- **`Boolean`**: `true` on success.
+
+---
+
+## Schema and install
+
+### initialize_app
+
+Description:
+
+The **`initialize_app`** method reinitialises an app. See "How to install and reinitialise an app" for the steps.
+
+Syntax:
+
+```php
+$result = AppManager::initialize_app('myapp');
+```
+
+**Parameters:**
+
+- **`$app_name`** (optional): App name. Default is the calling app.
+
+**Return Value:**
+
+- **`Array`**: Keys `roles`, `scopes_pruned` and `scripts_runed`.
+- **`false`** if an exception stops it.
+
+---
+
+### installSchema
+
+Description:
+
+The **`installSchema`** method builds an app's tables at install time from `<createTables>`, using `generateTableFromXml`.
+
+Syntax:
+
+```php
+$ok = AppManager::installSchema('myapp');
+```
+
+**Parameters:**
+
+- **`$app_name`**: App name.
+
+**Return Value:**
+
+- **`Boolean`**: `false` when the app has no tables to build. It's `true` otherwise, even if some tables failed: check the log, or call `generateTableFromXml` for per-table results.
 
 ---
 
@@ -912,115 +995,69 @@ This function provides a straightforward and efficient way to generate tables fo
 
 Description:
 
-The `generateTableFromXml` function generates tables for the specified app if they do not already exist. The table definitions are taken from the app's **`config.xml`** file.
+The **`generateTableFromXml`** method runs `CREATE TABLE IF NOT EXISTS` for each `<table>` in `api/apps/<app>/<app>.xml`, with keys, charset and collation, then creates each column `index`.
+
+Use it for a first install. For existing tables use `initialize_app`: the `CREATE INDEX` step fails on a table that already has the index, and that table is reported as `false`.
 
 Syntax:
 
 ```php
-AppManager::generateTableFromXml($app_name)
+$results = AppManager::generateTableFromXml('myapp');
+// ['orders' => true, 'order_meta' => true]
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$app_name`:** The name of the app to be created tables from the XML.
+- **`$app_name`**: App name. Required.
 
-**Returns:**
+**Return Value:**
 
-- void
-
-This function provides a straightforward and efficient way to generate tables for an app based on its **`config.xml`** file.
+- **`Array`**: Table name => `true` or `false`.
+- **`false`** if the manifest is missing or has no tables.
 
 ---
 
-### getAppsInfo
+### createTablesfromxml
 
 Description:
 
-The **`getAppsInfo`** function reads the XML configurations of apps in the system and provides the info section of the XML config.
+The **`createTablesfromxml`** method calls `generateTableFromXml` for the calling app and discards the result.
 
 Syntax:
 
 ```php
-AppManager::getAppsInfo()
+AppManager::createTablesfromxml();
 ```
 
-**Returns:**
+**Return Value:**
 
-- An array containing app information in the system.
-- An empty array if the operation to retrieve app information is unsuccessful.
-
-This function offers a straightforward and efficient way to retrieve information about apps in the system.
+- None.
 
 ---
 
-### extract_xml_section_from_all_app_configs
+### get_tables_from_xml
 
 Description:
 
-The **`extract_xml_section_from_all_app_configs`** function extracts the specified XML section from the configuration of each application.
+The **`get_tables_from_xml`** method returns the `<createTables>` element of an app's manifest.
 
 Syntax:
 
 ```php
-AppManager::extract_xml_section_from_all_app_configs($section)
+$tables = AppManager::get_tables_from_xml('myapp');
+foreach ($tables->table as $table) {
+    echo (string) $table['name'];
+}
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$section`:**  The section to extract from each app's configuration.
+- **`$app_name`** (optional): App name. Default is the calling app.
 
-**Returns:**
+**Return Value:**
 
-- An array containing the specified XML section from each app's configuration.
-- An empty array if retrieval is unsuccessful.
-
-This function provides a straightforward and efficient way to extract a specific XML section from the configuration of all applications.
-
----
-
-### getAppsUserPermissions
-
-Description:
-
-The **`getAppsUserPermissions`** function retrieves the defined user permissions of all apps in the system.
-
-Syntax:
-
-```php
-AppManager::getAppsUserPermissions()
-```
-
-**Returns:**
-
-- An array of user permissions of apps.
-- An empty array if retrieval is unsuccessful..
-
-his function offers a straightforward and efficient way to retrieve user permissions of apps.
-
----
-
-### getAppUserPermission
-
-Description:
-
-The **`getAppUserPermission`** function retrieves an app’s defined user permissions.
-
-Syntax:
-
-```php
-AppManager::getAppsUserPermissions(string $app_name)
-```
-
-**Parameters**:
-
-- **`$app_name`:** The name of the app
-
-**Returns:**
-
-- An array of user permissions of an app.
-- An empty array if retrieval is unsuccessful.
-
-This function offers a straightforward and efficient way to retrieve user permissions of an app
+- **`SimpleXMLElement`**: The `<createTables>` element.
+- **`false`** if the manifest doesn't exist.
 
 ---
 
@@ -1028,24 +1065,145 @@ This function offers a straightforward and efficient way to retrieve user permis
 
 Description:
 
-The **`getTableNames`** function is designed to retrieve table names from the specified app’s XML config.
+The **`getTableNames`** method lists the table names in an app's `<createTables>`, without the prefix.
 
 Syntax:
 
 ```php
-AppManager::getTableNames($app_name = null)
+$names = AppManager::getTableNames('myapp'); // ['orders', 'order_meta']
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$app_name` (optional):** The name of the app. If not specified, it will get the calling app.
+- **`$app_name`** (optional): App name. Default is the calling app.
 
-**Returns:**
+**Return Value:**
 
-- An array of table names
-- An empty array if retrieval is unsuccessful.
+- **`Array`**: Table names. Empty if none.
 
-This function offers a straightforward and efficient way to retrieve table names.
+---
+
+### DBFunctions
+
+Description:
+
+The **`DBFunctions`** method returns a new `AppManagerDatabaseFunctions` object.
+
+Syntax:
+
+```php
+$db = AppManager::DBFunctions();
+```
+
+**Return Value:**
+
+- **`AppManagerDatabaseFunctions`**
+
+---
+
+### ConfigHandler
+
+Description:
+
+The **`ConfigHandler`** method returns an `AppConfigHandler` for an app's manifest.
+
+Syntax:
+
+```php
+$config = AppManager::ConfigHandler('myapp');
+```
+
+**Parameters:**
+
+- **`$app_name`**: App name.
+
+**Return Value:**
+
+- **`AppConfigHandler`**. Throws an `Exception` if the manifest doesn't exist.
+
+---
+
+### useCoreDatabase
+
+Description:
+
+The **`useCoreDatabase`** method switches the `AppManager` table helpers from the session database to the database in the config file for the rest of the request, or until you call `revertToDefaultDatabaseState`. `AppManagerDatabaseFunctions` and your DAOs aren't affected.
+
+Syntax:
+
+```php
+AppManager::useCoreDatabase();
+try {
+    $rows = AppManager::getRecordsFromTable('settings');
+} finally {
+    AppManager::revertToDefaultDatabaseState();
+}
+```
+
+**Return Value:**
+
+- None.
+
+---
+
+### revertToDefaultDatabaseState
+
+Description:
+
+The **`revertToDefaultDatabaseState`** method switches the helpers back to the session database.
+
+Syntax:
+
+```php
+AppManager::revertToDefaultDatabaseState();
+```
+
+**Return Value:**
+
+- None.
+
+---
+
+### isUsingMainDatabase
+
+Description:
+
+The **`isUsingMainDatabase`** method tells you whether `useCoreDatabase` is in effect.
+
+Syntax:
+
+```php
+$core = AppManager::isUsingMainDatabase();
+```
+
+**Return Value:**
+
+- **`Boolean`**
+
+---
+
+## Apps and manifests
+
+### CreateAppInstance
+
+Description:
+
+The **`CreateAppInstance`** method returns a new instance of another app's main class, if that app allows the calling app. See "How to call another app".
+
+Syntax:
+
+```php
+$reports = AppManager::CreateAppInstance('reports');
+```
+
+**Parameters:**
+
+- **`$AppName`**: Target app's folder name.
+
+**Return Value:**
+
+- **`Object`**: The app instance.
+- **`false`** if the app is missing, inactive, has no `<app_permissions>`, doesn't allow the caller, or has no main class.
 
 ---
 
@@ -1053,25 +1211,229 @@ This function offers a straightforward and efficient way to retrieve table names
 
 Description:
 
-The **`runCommonFuntionInApps`** function is designed to invoke a method declared within the 'app' class. It iterates through all instances of the 'app' class and executes the specified function with the given parameters.
+The **`runCommonFuntionInApps`** method calls one method on every app that lets the calling app in (through `CreateAppInstance`) and that has the method. Apps that refuse the caller log a warning and are skipped.
 
 Syntax:
 
 ```php
-AppManager::runCommonFuntionInApps($function_name, $params)
+$results = AppManager::runCommonFuntionInApps('dashboardWidgets', ['user_id' => 7]);
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$function_name`: The name of the function to be called within the 'app' class.**
-- $params: An array containing any parameters needed for the function.
+- **`$function_name`**: Method name.
+- **`$params`**: Passed to the method as its one argument.
 
-**Returns:**
+**Return Value:**
 
-- An array containing the results of executing the specified function in each app class.
-- An empty array if retrieval is unsuccessful.
+- **`Array`**: App name => return value, for each app whose method returned something other than `null`.
 
-This function offers a straightforward and efficient way to invoke methods within the 'app' class for internal communication.,
+---
+
+### getAppPermission
+
+Description:
+
+The **`getAppPermission`** method lists the apps named in an app's `<app_permissions>`, that is, the apps allowed to call it. It doesn't report `allow="all"`.
+
+Syntax:
+
+```php
+$callers = AppManager::getAppPermission('reports'); // ['myapp']
+```
+
+**Parameters:**
+
+- **`$app_name`**: App name.
+
+**Return Value:**
+
+- **`Array`**: App names.
+- **`false`** if the manifest doesn't exist.
+
+---
+
+### checkIfAppExist
+
+Description:
+
+The **`checkIfAppExist`** method checks that an app's folder, `<app>.xml` and `<app>.class.php` exist and that the app is active. An app whose main class is only a namespaced file, such as `MyApp.php`, returns `false`.
+
+Syntax:
+
+```php
+if (AppManager::checkIfAppExist('reports')) { /* … */ }
+```
+
+**Parameters:**
+
+- **`$app_name`**: App name.
+
+**Return Value:**
+
+- **`Boolean`**
+
+---
+
+### get_current_app_name
+
+Description:
+
+The **`get_current_app_name`** method returns the calling app's name, the same name the table helpers use as a prefix.
+
+Syntax:
+
+```php
+$app = AppManager::get_current_app_name(); // 'myapp'
+```
+
+**Return Value:**
+
+- **`String`**: App folder name.
+- **`null`** if the call doesn't come from an app folder.
+
+---
+
+### getAppsInfo
+
+Description:
+
+The **`getAppsInfo`** method reads the `<info>` block of every app's manifest. Each child element becomes a string. `app_image` is turned into a path under `/apps/<app>`.
+
+Syntax:
+
+```php
+$info = AppManager::getAppsInfo();
+// ['myapp' => ['app_name' => 'myapp', 'display_name' => 'My App', 'app_version' => '1.0.0', …]]
+```
+
+**Return Value:**
+
+- **`Array`**: App name => info array. Empty if none.
+
+---
+
+### get_system_apps_info
+
+Description:
+
+The **`get_system_apps_info`** method is `getAppsInfo` filtered to apps whose `app_type` is `system_app`.
+
+Syntax:
+
+```php
+$system_apps = AppManager::get_system_apps_info();
+```
+
+**Return Value:**
+
+- **`Array`**: App name => info array.
+
+---
+
+### extract_xml_section_from_all_app_configs
+
+Description:
+
+The **`extract_xml_section_from_all_app_configs`** method returns one named top-level section from every app's manifest.
+
+Syntax:
+
+```php
+$options = AppManager::extract_xml_section_from_all_app_configs('app_options');
+```
+
+**Parameters:**
+
+- **`$section`**: Element name, such as `app_options`.
+
+**Return Value:**
+
+- **`Array`**: App name => `SimpleXMLElement`, for apps that have the section.
+
+---
+
+### getAppsUserPermissions
+
+Description:
+
+The **`getAppsUserPermissions`** method reads every `<user_permissions>` block in every manifest, whatever their `auto_update` setting. A manifest that doesn't parse is logged and skipped.
+
+Syntax:
+
+```php
+$all = AppManager::getAppsUserPermissions();
+// ['myapp' => ['app_info' => […], 'permission_list' => ['basic_permissions' => [[ 'name' => 'view', … ]]]]]
+```
+
+**Return Value:**
+
+- **`Array`**: Keyed by each block's `name`. Each entry has `app_info` and `permission_list` (category => permissions), plus `scopes` when the block declares them.
+
+---
+
+### getAppUserPermission
+
+Description:
+
+The **`getAppUserPermission`** method returns only the permissions marked `auto_update="true"` in one app's `<user_permissions>` or `<admin_panel_permissions>`, as one flat list.
+
+Syntax:
+
+```php
+$perms = AppManager::getAppUserPermission('myapp', 0);
+// ['permission_list' => [['display_name' => 'View', 'name' => 'view', 'info' => '', 'auto_update' => 'true']]]
+```
+
+**Parameters:**
+
+- **`$app_name`**: App name.
+- **`$permission_type`** (optional): `0` (default) for `<user_permissions>`, `1` for `<admin_panel_permissions>`.
+
+**Return Value:**
+
+- **`Array`**: `['permission_list' => […]]`, or an empty array if there are none.
+
+---
+
+### getRegistered_apps
+
+Description:
+
+The **`getRegistered_apps`** method returns the `apps` section of the main system config.
+
+Syntax:
+
+```php
+$apps = AppManager::getRegistered_apps();
+```
+
+**Return Value:**
+
+- **`Array`**: The registered apps. Empty if there are none.
+
+---
+
+### register
+
+Description:
+
+The **`register`** method writes an app's active flag to the `apps` section of the main system config. It's unrelated to the `register()` method of the `App` class.
+
+Syntax:
+
+```php
+AppManager::register('myapp', true);
+```
+
+**Parameters:**
+
+- **`$app_name`**: App name.
+- **`$active`**: Value to store.
+
+**Return Value:**
+
+- None.
 
 ---
 
@@ -1079,24 +1441,22 @@ This function offers a straightforward and efficient way to invoke methods withi
 
 Description:
 
-The **`getAppRun`** function is created to retrieve configuration tasks for an app from its XML configuration file. It retrieves configuration tasks, such as scripts and SQL queries, for a specified app from its XML configuration file (**`app_name.xml`**). The tasks are located within the 'run' element of the XML.
+The **`getAppRun`** method returns the `<run>` element of an app's manifest.
 
 Syntax:
 
 ```php
-AppManager::getAppRun($app_name = null)
+$run = AppManager::getAppRun('myapp');
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$app_name`:** The name of the app for which configuration tasks are to be retrieved. If not provided, it is dynamically determined from the calling app.
+- **`$app_name`** (optional): App name. Default is the calling app.
 
-**Returns:**
+**Return Value:**
 
-- Returns a SimpleXMLElement representing the 'run' element from the app's XML configuration file.
-- **`false`** If the file or 'run' element is not found, returns false.
-
-This function offers a straightforward and efficient way to retrieve configuration tasks from the XML file of a specified app.
+- **`SimpleXMLElement`**: The `<run>` element. It's empty if the manifest has none.
+- **`false`** if the manifest doesn't exist.
 
 ---
 
@@ -1104,87 +1464,67 @@ This function offers a straightforward and efficient way to retrieve configurati
 
 Description:
 
-The **`runConfig`** function is designed to execute configuration tasks for an app, including scripts and SQL queries. This function executes configuration tasks for an app, obtained from the 'AppRun' configuration. Tasks can include running scripts or executing SQL queries, depending on the configuration.
+The **`runConfig`** method runs the entries in an app's `<run>` block:
+
+- `<script class_name="myappRun" function_name="init" file="run.class.php"/>` includes `api/apps/myapp/run.class.php` and calls `myappRun::init()` statically, with no arguments. A truthy return counts as success.
+- `<sql>myapp/setup</sql>` runs `api/apps/myapp/setup.sql`. The path is relative to the apps directory and has no `.sql` extension.
+
+```xml
+<run>
+    <script class_name="myappRun" function_name="init" file="run.class.php"/>
+    <sql>myapp/setup</sql>
+</run>
+```
 
 Syntax:
 
 ```php
-AppManager::runConfig($app_name = null)
+$result = AppManager::runConfig('myapp');
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$app_name`:** The name of the app for which configuration tasks are to be retrieved. If not provided, it is dynamically determined from the calling app.
+- **`$app_name`** (optional): App name. Default is the calling app.
 
-**Returns:**
+**Return Value:**
 
-- Returns an array indicating the success of each configuration task.
-- **`false`** If no tasks are executed, returns false.
-
-This function provides a straightforward and efficient way to execute configuration tasks for an app based on the 'AppRun' configuration.
+- **`Array`**: `script_run` => `['script_executed' => bool]` and `sql_run` => `['sql_executed' => bool]`. With several entries of one kind, only the last one's result is kept.
+- **`false`** if nothing ran.
 
 ---
 
-### initialize_app
+# AppManagerDatabaseFunctions methods
 
-Description:
-
-The **`initialize_app`** function is designed to initialize an app by creating/updating its database tables, adding columns, and managing permissions. This function performs the following tasks:
-
-- Determines the app name, either from the provided parameter or dynamically from the calling app.
-- Uses **`AppManager::DBFunctions()`** to manage database-related functions.
-- Retrieves tables from XML configuration and checks/creates each table in the database.
-- Adds new columns to existing tables if necessary.
-- Manages user permissions for both app users and the admin panel.
-- Executes app-specific scripts using **`AppManager::runConfig()`**.
-
-Syntax:
+Get an instance with `AppManager::DBFunctions()`. These methods take **full** table names (`myapp_orders`) and always use the session database.
 
 ```php
-AppManager::initialize_app($app_name = null)
+$db = AppManager::DBFunctions();
+if ($db->check_table_exist('myapp_orders')) {
+    $db->add_index('myapp_orders', 'status');
+}
 ```
 
-**Parameters**:
-
-- **`$app_name`:** The name of the app to initialize. If not provided, it is dynamically determined from the calling app.
-
-**Returns:**
-
-- Returns an array with information about the initialization process.
-- **`false`** if an error occurs.
-
-This function provides a comprehensive and efficient way to initialize an app, ensuring that database tables, columns, and permissions are set up correctly.
-
 ---
-
-# AppManagerDatabaseFunctions Class
-
----
-
-## Functions For Database Operations
 
 ### check_table_exist
 
 Description:
 
-The **`check_table_exist`** function is used to check if the specified table exists in the database.
+The **`check_table_exist`** method checks whether a base table exists.
 
 Syntax:
 
 ```php
-AppManager::check_table_exist($table_name)
+$exists = $db->check_table_exist('myapp_orders');
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$table_name`:** The name of the table
+- **`$table_name`**: Full table name.
 
-**Returns:**
+**Return Value:**
 
-- **`true`** if the table exists.
-- **`false`** if the table does not exist.
-
-This function provides a straightforward and efficient way to check the existence of a table in the database.
+- **`Boolean`**
 
 ---
 
@@ -1192,50 +1532,25 @@ This function provides a straightforward and efficient way to check the existenc
 
 Description:
 
-The **`create_table`** function is used to create a table in the database.
-
-The **`$table`** array should follow this format:
-
-```php
-$table = array(
-    'name' => 'your_table_name',
-    'column' => array(
-        array(
-            'name' => 'column1',
-            'type' => 'datatype1',
-            'size' => 'size1',
-            'default' => 'default_value1',
-            'attributes' => 'additional_attributes1',
-            'null' => 'true_or_false', // 'true' for NULL, 'false' for NOT NULL
-            'autoincrement' => 'true_or_false', // 'true' for AUTO_INCREMENT, 'false' for no autoincrement
-            'primarykey' => 'true_or_false', // 'true' if this column is part of the primary key, 'false' otherwise
-        ),
-        // Additional columns can be added similarly
-        array(
-            'name' => 'column2',
-            // ... (other column properties)
-        ),
-    ),
-);
-```
+The **`create_table`** method creates a table from a `<table>` element: its columns, primary key, charset and collation. It doesn't add `unique`, `index` or `<unique>` keys: call `add_unique_key` and `add_index` afterwards. It's a static method, so `AppManagerDatabaseFunctions::create_table(…)` also works.
 
 Syntax:
 
 ```php
-AppManager::create_table($table,$prefix)
+$tables = AppManager::get_tables_from_xml('myapp');
+$db->create_table($tables->table[0], 'myapp', 'utf8mb4', 'utf8mb4_unicode_ci');
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$table`:** The data of the table to be created.
-- **`$prefix`:** The table prefix.
+- **`$table`**: A `<table>` `SimpleXMLElement`.
+- **`$prefix`**: App name. The table is created as `<prefix>_<name>`.
+- **`$defaultCharset`** (optional): Used if the table sets no `charset`.
+- **`$defaultCollation`** (optional): Used if the table sets no `collation`.
 
-**Returns:**
+**Return Value:**
 
-- **`true`** if the table is successfully created.
-- **`false`** if the table creation fails.
-
-This function provides a straightforward and efficient way to create a table in the database.
+- None. Errors are logged.
 
 ---
 
@@ -1243,24 +1558,22 @@ This function provides a straightforward and efficient way to create a table in 
 
 Description:
 
-The **`get_columns`** function is used to retrieve the columns of a specified table.
+The **`get_columns`** method returns `SHOW FULL COLUMNS` for a table.
 
 Syntax:
 
 ```php
-AppManager::get_columns($table_name)
+$columns = $db->get_columns('myapp_orders');
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$table_name`:** The name of the table
+- **`$table_name`**: Full table name.
 
-**Returns:**
+**Return Value:**
 
-- An array of columns
-- **`false`** if the table does not exist.
-
-This function offers a precise and efficient way to retrieve the columns of a table.
+- **`Array`**: One row per column with `Field`, `Type`, `Collation`, `Null`, `Key`, `Default`, `Extra`, `Privileges` and `Comment`.
+- **`false`** on error.
 
 ---
 
@@ -1268,57 +1581,23 @@ This function offers a precise and efficient way to retrieve the columns of a ta
 
 Description:
 
-The **`get_column_info`** function is used to retrieve information about a specific column in a table.
+The **`get_column_info`** method returns the `SHOW FULL COLUMNS` row for one column.
 
 Syntax:
 
 ```php
-AppManager::get_column_info($table_name, $column_name)
+$info = $db->get_column_info('myapp_orders', 'status');
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$table_name`**: The name of the table to get column info.
-- **`$column_name`**: The column name to get info.
+- **`$table_name`**: Full table name.
+- **`$column_name`**: Column name.
 
-**Returns:**
+**Return Value:**
 
-- An array containing information about the specified column.
-- **`false`** if the table or column does not exist.
-
-This function offers a precise and efficient way to retrieve information about a specific column in a table.
-
----
-
-### update_column
-
-Description:
-
-The **`update_column`** function is used to update the properties of a column in a table.
-
-Syntax:
-
-```php
-AppManager::update_column($table_name, $column_name, $type, $size = null, $default = null, $attributes = null, $nullable = false, $new_column_name = null)
-```
-
-**Parameters**:
-
-- **`$table_name`**: The name of the table in which the column exists.
-- **`$column_name`**: The name of the column to be updated.
-- **`$type`**: The new data type for the column.
-- **`$size`**: The new size for the column (optional).
-- **`$default`**: The new default value for the column (optional).
-- **`$attributes`**: The new attributes for the column (optional).
-- **`$nullable`**: Boolean indicating whether the column should be nullable (default is **`false`**).
-- **`$new_column_name`**: The new name for the column (optional).
-
-**Returns:**
-
-- **`true`** if the operation is successful.
-- **`false`** if the operation is not successful.
-
-This function provides a precise and streamlined approach to updating the properties of a column in a table, making it an invaluable asset for managing database schema changes in your application.
+- **`Array`**: The column row.
+- **`false`** if the column doesn't exist or on error.
 
 ---
 
@@ -1326,33 +1605,328 @@ This function provides a precise and streamlined approach to updating the proper
 
 Description:
 
-The **`add_column`** function is used to add a new column to a table in the database.
+The **`add_column`** method adds a column at the end of a table.
 
 Syntax:
 
 ```php
-AppManager::add_column($table_name, $column_name, $type, $size = null, $default = null, $attributes = null, $nullable = false)
+$ok = $db->add_column('myapp_orders', 'paid_at', 'datetime', null, null, null, true);
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$table_name`**: The name of the table to which the new column will be added.
-- **`$column_name`**: The name of the new column.
-- **`$type`**: The data type of the new column.
-- **`$size`**: The size of the new column (optional).
-- **`$default`**: The default value for the new column (optional).
-- **`$attributes`**: The attributes for the new column (optional).
-- **`$nullable`**: Boolean indicating whether the new column should be nullable (default is **`false`**).
+- **`$table_name`**: Full table name.
+- **`$column_name`**: New column.
+- **`$type`**: SQL type.
+- **`$size`** (optional): Size, without brackets.
+- **`$default`** (optional): Default value. Quoted the same way as the XML `default`.
+- **`$attributes`** (optional): Raw text after the type, such as `UNSIGNED`.
+- **`$nullable`** (optional): `true` for NULL. Default `false`.
+- **`$on_update`** (optional): `ON UPDATE` expression.
+- **`$charset`**, **`$collation`** (optional): Column charset and collation. Only letters, digits and `_` are accepted. Anything else is dropped and logged.
 
-**Returns:**
+**Return Value:**
 
-- **`true`** if the operation is successful.
-- **`false`** if the operation is not successful.
+- **`Boolean`**: `true` on success.
 
-This function provides a precise and streamlined approach to adding a new column to a table, making it an invaluable asset for managing database schema changes in your application.
+---
+
+### update_column
+
+Description:
+
+The **`update_column`** method rewrites a column's whole definition with `ALTER TABLE … CHANGE`, and can rename it. If the live column is `AUTO_INCREMENT`, that's kept.
+
+Syntax:
+
+```php
+$ok = $db->update_column('myapp_orders', 'note', 'varchar', '500', null, null, true, 'customer_note');
+```
+
+**Parameters:**
+
+- **`$table_name`**, **`$column_name`**: Table and current column name.
+- **`$type`**, **`$size`**, **`$default`**, **`$attributes`**, **`$nullable`**: As for `add_column`.
+- **`$new_column_name`** (optional): New name.
+- **`$on_update`**, **`$charset`**, **`$collation`** (optional): As for `add_column`.
+
+**Return Value:**
+
+- **`Boolean`**: `true` on success.
+
+---
+
+### add_unique_key
+
+Description:
+
+The **`add_unique_key`** method adds a unique key if no unique key with that name exists in the current database. With one column the key is named `<column>_unique`. With several columns it's `<name>_unique`, or the columns joined by `_` plus `_unique`.
+
+Syntax:
+
+```php
+$ok = $db->add_unique_key('myapp_orders', ['customer_id', 'order_no'], 'customer_order');
+```
+
+**Parameters:**
+
+- **`$table_name`**: Full table name.
+- **`$columns`**: A column name or an array of column names.
+- **`$name`** (optional): Name for a multi-column key.
+
+**Return Value:**
+
+- **`Boolean`**: `true` if the key was added or already exists.
+
+---
+
+### add_index
+
+Description:
+
+The **`add_index`** method adds a single-column index named `<column>_index` if it doesn't exist yet.
+
+Syntax:
+
+```php
+$ok = $db->add_index('myapp_orders', 'status');
+```
+
+**Parameters:**
+
+- **`$table_name`**: Full table name.
+- **`$column_name`**: Column.
+
+**Return Value:**
+
+- **`Boolean`**: `true` if the index was added or already exists.
+
+---
+
+### get_table_collation
+
+Description:
+
+The **`get_table_collation`** method returns a table's collation.
+
+Syntax:
+
+```php
+$collation = $db->get_table_collation('myapp_orders');
+```
+
+**Parameters:**
+
+- **`$table_name`**: Full table name.
+
+**Return Value:**
+
+- **`String`**: The collation.
+- **`null`** if the table doesn't exist or on error.
+
+---
+
+### update_table_options
+
+Description:
+
+The **`update_table_options`** method changes a table's default charset and collation. Existing columns aren't converted.
+
+Syntax:
+
+```php
+$ok = $db->update_table_options('myapp_orders', 'utf8mb4', 'utf8mb4_unicode_ci');
+```
+
+**Parameters:**
+
+- **`$table_name`**: Full table name.
+- **`$charset`**, **`$collation`**: New values. Only letters, digits and `_` are accepted.
+
+**Return Value:**
+
+- **`Boolean`**: `false` if both values are empty or invalid, or on error.
 
 ---
 
 ### compareAndUpdateColumn
+
+Description:
+
+The **`compareAndUpdateColumn`** method is an unfinished stub. It runs an empty query and does nothing useful. Reinit does the column comparison itself (see "How schema changes converge on reinit").
+
+---
+
+# AppConfigHandler methods
+
+`AppConfigHandler` edits `api/apps/<app>/<app>.xml`. Each method writes the file straight away and reformats it. None of them touch the database: run `AppManager::initialize_app()` afterwards to apply new tables, columns or permissions.
+
+```php
+$config = AppManager::ConfigHandler('myapp');
+$config->addColumnToTable('orders', ['name' => 'paid_at', 'type' => 'datetime', 'null' => 'true']);
+AppManager::initialize_app('myapp');
+```
+
+---
+
+### addTable
+
+Description:
+
+The **`addTable`** method adds a `<table>` to `<createTables>`. The manifest must already have a `<createTables>` element.
+
+Syntax:
+
+```php
+$added = $config->addTable([
+    'name'    => 'invoices',
+    'columns' => [
+        ['name' => 'id', 'type' => 'bigint', 'size' => '20', 'attributes' => 'UNSIGNED', 'null' => 'false', 'autoincrement' => 'true', 'primarykey' => 'true'],
+        ['name' => 'total', 'type' => 'decimal', 'size' => '12,2', 'null' => 'false'],
+    ],
+]);
+```
+
+**Parameters:**
+
+- **`$table_data`**: `name` plus `columns`, a list of column attribute arrays. Any column attribute from the table above can be used.
+
+**Return Value:**
+
+- **`Boolean`**: `false` if a table with that name exists. Throws `InvalidArgumentException` if `name` or `columns` is missing.
+
+---
+
+### addColumnToTable
+
+Description:
+
+The **`addColumnToTable`** method adds a `<column>` to an existing `<table>`. It writes only `name`, `type`, `size`, `default`, `attributes` and `null` (default `true`). Other attributes are ignored.
+
+Syntax:
+
+```php
+$added = $config->addColumnToTable('orders', ['name' => 'paid_at', 'type' => 'datetime', 'null' => 'true']);
+```
+
+**Parameters:**
+
+- **`$table_name`**: Table name without the prefix.
+- **`$column_data`**: Column attributes. `name` and `type` are required.
+
+**Return Value:**
+
+- **`Boolean`**: `false` if the table is missing or the column exists. Throws `InvalidArgumentException` without `name` or `type`.
+
+---
+
+### addUserPermission
+
+Description:
+
+The **`addUserPermission`** method adds a permission to a `<user_permissions>` block and category, creating them if needed. It doesn't set `auto_update`, so reinit doesn't grant the new permission to the admin role.
+
+Syntax:
+
+```php
+$added = $config->addUserPermission('myapp', 'basic_permissions', ['display_name' => 'Export orders', 'name' => 'export_orders']);
+```
+
+**Parameters:**
+
+- **`$permission_name`**: The `<user_permissions>` block's `name`.
+- **`$category_name`**: Category name.
+- **`$permission_data`**: `display_name` and `name`. Both are required.
+
+**Return Value:**
+
+- **`Boolean`**: `false` if the permission exists.
+
+---
+
+### addAppPermission
+
+Description:
+
+The **`addAppPermission`** method adds `<permission app_name="…"/>` to `<app_permissions>`, which lets that app call this one. The manifest must already have an `<app_permissions>` element.
+
+Syntax:
+
+```php
+$added = AppManager::ConfigHandler('reports')->addAppPermission('myapp');
+```
+
+**Parameters:**
+
+- **`$app_name`**: App to allow.
+
+**Return Value:**
+
+- **`Boolean`**: `false` if it's already listed.
+
+---
+
+### updateAppPermissionName
+
+Description:
+
+The **`updateAppPermissionName`** method renames an app in `<app_permissions>`.
+
+Syntax:
+
+```php
+$ok = $config->updateAppPermissionName('oldapp', 'newapp');
+```
+
+**Parameters:**
+
+- **`$current_app_name`**: Name to find.
+- **`$new_app_name`**: Replacement.
+
+**Return Value:**
+
+- **`Boolean`**: `false` if the name isn't listed.
+
+---
+
+### setAppPermissionsAllowAll
+
+Description:
+
+The **`setAppPermissionsAllowAll`** method removes every `<permission>` from `<app_permissions>` and sets `allow="all"`. It creates the block if it's missing.
+
+<aside>
+⚠️ If the block ends up written as a self-closing `<app_permissions allow="all"/>`, `CreateAppInstance` treats it as empty and refuses every call. Check the file afterwards. It needs an opening and a closing tag.
+
+</aside>
+
+Syntax:
+
+```php
+$config->setAppPermissionsAllowAll();
+```
+
+**Return Value:**
+
+- **`Boolean`**: `true`.
+
+---
+
+### getConfigData
+
+Description:
+
+The **`getConfigData`** method returns the whole manifest.
+
+Syntax:
+
+```php
+$xml = $config->getConfigData();
+echo (string) $xml->info->app_version;
+```
+
+**Return Value:**
+
+- **`SimpleXMLElement`**
 
 ---
