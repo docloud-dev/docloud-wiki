@@ -24,7 +24,7 @@ The repo root is also an **Obsidian vault** (`.obsidian/`). Contributors edit in
 
 - `docs/`: technical guides. Everything lives under `docs/framework/`, apart from `docs/Home.md`, the landing page served at `/docs/` (`slug: /`).
 - A section of `docs/framework/` is a **folder with an overview page of the same name inside it**: `Essentials/Essentials.md`, `Modules/Modules.md`, `Modules/Util/Util.md`. Docusaurus makes that page the folder's sidebar entry, at the folder's URL. Don't put an overview page next to its folder (`Modules.md` beside `Modules/`), or the sidebar lists the section twice. When you add a child page, also add a short `##` section with a one-paragraph summary to the overview page, as `Modules/Modules.md` and `Essentials/Essentials.md` already do.
-- The sidebar is generated from the folders. Order comes from `sidebar_position` in front matter, and from `position` in a folder's `_category_.json`. `docs/framework/_category_.json` also sets the "Framework" label. Top-level framework pages use positions with gaps (Get Started 10, Docloud 20, Core Classes 30, Essentials 40, Modules 50, Vue DC UI KIT 60, Admin Panel 70, Todo App 80), so a new page can slot in between. Without a position, a page sorts alphabetically after the numbered ones.
+- The sidebar is generated from the folders. Order comes from `sidebar_position` in front matter, and from `position` in a folder's `_category_.json`. `docs/framework/_category_.json` also sets the "Framework" label. Top-level framework pages use positions with gaps (Get Started 10, Docloud 20, Architecture 25, Core Classes 30, Building Apps 35, Essentials 40, Modules 50, Frontend Runtime (XP) 55, Vue DC UI KIT 60, Admin Panel 70, Todo App 80), so a new page can slot in between. Without a position, a page sorts alphabetically after the numbered ones.
 - Filenames are Title Case with spaces and match the page's H1 (`Date And Time Manager.md`, `Scheduler (Heartbeat).md`).
 - `blog/`: posts named `YYYY-MM-DD-title.md`. Authors are defined in `blog/authors.yml`.
 - The root `README.md` mentions an `/api` folder for API references. It doesn't exist yet. Create it only if the user asks for API-reference content.
@@ -113,5 +113,5 @@ The product name is spelled several ways across pages: "DoFramework", "Do Framew
 
 ## Known gaps
 
-- `docs/framework/Essentials/Scheduler (Heartbeat).md` is an empty stub.
-- No existing doc page has front matter yet. Adding it is a welcome cleanup, but keep it out of unrelated edits.
+- Pages not yet rewritten for framework 0.0.42 still lack front matter and may describe old behaviour: Admin Panel, Core Classes, Docloud, Vue DC UI KIT, most of Modules/ and Modules/Util/, and Email, Localization, Logging, Service Worker and User Device Detection in Essentials/. Check claims against the framework code before relying on them. Adding front matter is a welcome cleanup, but keep it out of unrelated edits.
+- Database migrations are not documented yet. They are unreleased in the framework (0.0.42 has no `Migrator`).
