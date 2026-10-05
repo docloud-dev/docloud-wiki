@@ -336,7 +336,7 @@ The `dashboard` block itself also takes `hide`, an array of widget keys. See "Ho
 
 ## Kit components
 
-The dashboard's kit components are exported from `apps/xp_system/components/dc_ui_kit_componenets/dc_ui_kit_registry.js`. For the rest of the kit, see [Vue DC UI KIT](../Vue%20DC%20UI%20KIT.md).
+The dashboard's kit components are exported from `apps/xp_system/components/dc_ui_kit_componenets/dc_ui_kit_registry.js`. For the rest of the kit, see [Vue DC UI KIT](../Vue%20DC%20UI%20KIT/Vue%20DC%20UI%20KIT.md).
 
 ### DcDashboardWidget
 

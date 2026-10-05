@@ -281,7 +281,7 @@ The admin registry exports these 48 components:
 
 These main-SPA components are **not** in the admin registry: `DcActivityFeed`, `DcAjaxLoader`, `DcAjaxNotice`, `DcAppTiles`, `DcCalendarRangePicker`, `DcCollapsibleSidePanel`, `DcCommentFeed`, `DcDashboardWidget`, `DcDateRangePicker`, `DcEmptyState`, `DcPageHeader`, `DcPagination`, `DcPointList`, `DcQuickLinks`, `DcRadioGroup`, `DcSearchDropdown`, `DcSplitButton`, `DcStatGroup`, `DcToggleSwitch` and `DcTreeNavigation`.
 
-The two copies are maintained separately, so a component with the same name can lag behind its main-SPA version. See [Vue DC UI KIT](../Vue%20DC%20UI%20KIT.md) for the components themselves.
+The two copies are maintained separately, so a component with the same name can lag behind its main-SPA version. See [Vue DC UI KIT](../Vue%20DC%20UI%20KIT/Vue%20DC%20UI%20KIT.md) for the components themselves.
 
 ---
 

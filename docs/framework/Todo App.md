@@ -1143,7 +1143,7 @@ export default {
 - **`XP.checkPermission()`** hides the buttons a user can't use. It only changes what the user sees: the controller still checks every request.
 - **`DcPopup`** asks before the delete and names the todo. `show()` and `hide()` open and close it.
 
-See [Vue DC UI KIT](./Vue%20DC%20UI%20KIT.md) for the components, and [Frontend Runtime (XP)](./Frontend%20Runtime%20(XP).md) for `XP`.
+See [Vue DC UI KIT](./Vue%20DC%20UI%20KIT/Vue%20DC%20UI%20KIT.md) for the components, and [Frontend Runtime (XP)](./Frontend%20Runtime%20(XP).md) for `XP`.
 
 ## Step 17: Build the add and edit page
 
