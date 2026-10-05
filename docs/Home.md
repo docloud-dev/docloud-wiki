@@ -1,6 +1,10 @@
-# DoFramework - Wiki v5
+---
+slug: /
+sidebar_label: Home
+sidebar_position: 1
+---
 
-**Pages**
+# DoFramework - Wiki v5
 
 # Introduction
 

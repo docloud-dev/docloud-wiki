@@ -1,3 +1,7 @@
+---
+sidebar_position: 60
+---
+
 # Vue DC UI KIT
 
 Owner: Thilina Deepal

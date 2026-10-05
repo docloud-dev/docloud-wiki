@@ -1,3 +1,7 @@
+---
+sidebar_position: 30
+---
+
 # Core Classes
 
 Owner: Thilina Deepal

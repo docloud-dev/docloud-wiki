@@ -1,3 +1,7 @@
+---
+sidebar_position: 70
+---
+
 # Admin Panel
 
 Owner: Thilina Deepal
