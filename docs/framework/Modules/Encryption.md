@@ -1,202 +1,337 @@
+---
+title: Encryption
+sidebar_label: Encryption
+---
+
 # Encryption
 
 Owner: Nuwan Danushka
 
 # Introduction
 
-The Encryption Module offers secure data encryption and decryption through functions like getEncryptedData and getDecryptedData. Additionally, it facilitates token creation. With a focus on simplicity and security, it seamlessly integrates into applications, ensuring data security without compromising ease of use.
+The Encryption module encrypts and decrypts strings, and packs an array of data into a URL-safe token that you can decode later. It has three classes:
 
----
+- `Encryption`: the module class. Encrypts and decrypts a stored string, and builds and decodes tokens.
+- `EncryptFunctions`: static helpers to encrypt, decrypt and hash a string with a key you choose.
+- `Token`: the token functions behind `Encryption::buildToken()` and `Encryption::decodeToken()`, plus `getAuthorizeToken()`.
+
+`Encryption` is loaded automatically. `EncryptFunctions` and `Token` are loaded with it, so reference `Encryption` first (for example with `class_exists('Encryption')`) if you call them before anything else has used the module.
+
+The module encrypts with AES-128-CTR. The key is the `encryption_key` in the `<encryption>` section of `api/config.<environment>.xml`, which you can also change in the admin panel's security settings (see [Configuration Files](../Essentials/Configuration%20Files.md)). The "Encryption Method" setting on that page doesn't affect this module. If you change the key, data and tokens made with the old key can no longer be decrypted.
 
 <aside>
-💡 The encryption method used for securing data and other settings for encryption can typically be found within the security settings of the admin panel.
+⚠️ Don't use this module's tokens for authentication, and don't use the module to protect passwords, payment details or other sensitive data. For that, use PHP's `sodium_*` functions, or `openssl_encrypt()` with a random IV for each message.
 
 </aside>
 
-# How To Encrypt
+---
 
-This guide outlines the process of encrypting data using the **`Encryption`** module in Do Framework.
-
-1. **Define Data to Encrypt**
-    
-    ```php
-    $data_to_encode = "Hello World";
-    ```
-    
-    - Set the variable **`$data_to_encode`** to the data you want to encrypt. Replace **`"Hello World"`** with the actual data you intend to encrypt.
-    
-2. **Initialize Encryption Object**
-    
-    ```php
-    $encryption_object = new Encryption();
-    ```
-    
-    - Create a new instance of the **`Encryption`** class. This class is assumed to handle encryption operations.
-    
-3. **Set Data for Encryption**
-    
-    ```php
-    $encryption_object->setString($data_to_encode);
-    ```
-    
-    - Call the **`setString()`** method on the **`$encryption_object`** instance, passing the data to be encrypted (**`$data_to_encode`**) as an argument.
-    
-4. **Retrieve Encrypted Data**
-    
-    ```php
-    $encrypted_string = $encryption_object->getEncryptedData();
-    ```
-    
-    - Call the **`getEncryptedData()`** method on the **`$encryption_object`** instance. This method is expected to perform encryption on the previously set string and return the encrypted data. The encrypted data is stored in the variable **`$encrypted_string`**.
+# How to encrypt
 
 ```php
-// Step 1: Define Data to Encrypt
-$data_to_encode = "Hello World";
-
-// Step 2: Initialize Encryption Object
-$encryption_object = new Encryption();
-
-// Step 3: Set Data for Encryption
-$encryption_object->setString($data_to_encode);
-
-// Step 4: Retrieve Encrypted Data
-$encrypted_string = $encryption_object->getEncryptedData();
-
+$encryption = new Encryption();
+$encryption->setString("Hello World");
+$encrypted_string = $encryption->getEncryptedData();
 ```
 
-This code snippet demonstrates how to encrypt data using the Encryption module provided by the Do framework. 
-Each step is accompanied by a comment to explain its purpose in the encryption process. 
+`getEncryptedData()` encrypts the stored string with the configured key and returns a base64 string, or `false` if encryption fails.
+
+You can also pass the string to the constructor under the `do_token` key:
+
+```php
+$encryption = new Encryption(['do_token' => "Hello World"]);
+$encrypted_string = $encryption->getEncryptedData();
+```
 
 ---
 
-# How To Decrypt
+# How to decrypt
 
-This guide outlines the process of decrypting data using the **`Encryption`** module in Do Framework.
-
-1. **Define Data to Decrypt**
-    
-    ```php
-    $data_to_decrypt = "YEwsEjrTMu7m3bliq0aqTg==";
-    ```
-    
-    - Set the variable **`$data_to_decrypt`** to the encrypted data you want to decrypt.
-    
-2. **Initialize Decryption Object**
-    
-    ```php
-    $decryption_object = new Encryption();
-    ```
-    
-    - Create a new instance of the **`Encryption`** class. This class is assumed to handle decryption operations.
-    
-3. **Set Data for Decryption**
-    
-    ```php
-    $encryption_object->setString($data_to_encode);
-    ```
-    
-    - Call the **`setString()`** method on the **`$decryption_object`** instance, passing the data to be decrypted (**`$data_to_decrypt`**) as an argument.
-    
-4. **Retrieve Decrypted Data**
-    
-    ```php
-    $decrypted_data = $decryption_object->getDecryptedData();
-    ```
-    
-    - Call the **`getDecryptedData()`** method on the **`$decryption_object`** instance. This method is expected to perform decryption on the previously set encrypted string and return the decrypted data. The decrypted data is stored in the variable **`$decrypted_data`**.
+Store the encrypted string with `setString()`, then call `getDecryptedData()`:
 
 ```php
-// Step 1: Define Data to Decrypt
-$data_to_decrypt = "YEwsEjrTMu7m3bliq0aqTg=="; // Encrypted data to be decrypted
-
-// Step 2: Initialize Decryption Object
-$decryption_object = new Encryption(); // Initialize Decryption object
-
-// Step 3: Set Data for Decryption
-$decryption_object->setString($data_to_decrypt); // Set data for decryption
-
-// Step 4: Retrieve Decrypted Data
-$decrypted_data = $decryption_object->getDecryptedData(); // Retrieve decrypted data
-
+$decryption = new Encryption();
+$decryption->setString($encrypted_string);
+$decrypted_data = $decryption->getDecryptedData(); // "Hello World"
 ```
 
-This code snippet demonstrates how to decrypt data using the Encryption module provided by the Do framework. 
-Each step is accompanied by a comment to explain its purpose in the decryption process. 
+`getDecryptedData()` returns `false` if decryption fails.
 
 ---
 
-# How to Build a Token
+# How to build a token
 
-This guide outlines the process of building a token using the **`Encryption`** module in Do Framework.
-
-<aside>
-💡 if additional data is added to the token, its size will increase.
-
-</aside>
-
-1. **Define Token Data**
-    
-    ```php
-    // Define the data to be included in the token
-    $token_data = array(
-        "user_id" => $user_id, // User ID
-        "email" => $email, // Email
-        "expire" => $expire_int // Expiry time
-    );
-    ```
-    
-    - Define an associative array **`$token_data`** containing the information you want to include in the token. This may include user ID, email, and expiration time, among other relevant data.
-
-1. **Build the Token**
-    
-    ```php
-    // Build the token using the Encryption class method
-    $token = Encryption::buildToken($token_data);
-    ```
-    
-    - Call the **`buildToken()`** method from the **`Encryption`** class, passing the token data array as an argument. This method will generate the token based on the provided data.
+A token holds an array of data as a single URL-safe string, so you can put it in a link:
 
 ```php
-// Define the token data
 $token_data = array(
     "user_id" => $user_id,
     "email" => $email,
-    "expire" => $expire_int
+    "expire" => strtotime('+1 day')
 );
 
-// Build the token
 $token = Encryption::buildToken($token_data);
 ```
 
- 
-
-This code snippet demonstrates how to build a token using the Encryption module provided by the Do framework. 
-Each step is accompanied by a comment to explain its purpose in the token build process. 
+`buildToken()` returns the token string, or `null` if it fails. The token grows with the data you put in it.
 
 ---
 
-# How to Decode a Token
+# How to decode a token
 
-This guide outlines the process of decoding a token using the **`Encryption`** module in Do Framework.
+```php
+$decoded_data = Encryption::decodeToken($token);
 
-1. **Decode the Token**
-    
-    ```php
-    // Decode the token using the Encryption class method
-    $decoded_data = Encryption::decodeToken($token);
-    ```
-    
-    - Call the **`decodeToken()`** method from the **`Encryption`** class, passing the token string as an argument. This method will decode the token and return the decoded data.
-2. **Access Decoded Data**
-    
-    ```php
-    // Access decoded data
-    $user_id = isset($decoded_data['user_id']) ? $decoded_data['user_id'] : null;
-    $email = isset($decoded_data['email']) ? $decoded_data['email'] : null;
-    $expire = isset($decoded_data['expire']) ? $decoded_data['expire'] : null;
-    ```
-    
-    - Access the decoded data using keys corresponding to the data you encoded into the token. In this example, **`$decoded_data['user_id']`**, **`$decoded_data['email']`**, and **`$decoded_data['expire']`** correspond to the user ID, email, and expiration time respectively.
+if ($decoded_data === null) {
+    // Not a valid token.
+}
 
-This code snippet demonstrates how to build a token using the Encryption module provided by the Do framework. 
-Each step is accompanied by a comment to explain its purpose in the token build process.
+$user_id = $decoded_data['user_id'] ?? null;
+$expire = $decoded_data['expire'] ?? null;
+
+if ($expire === null || $expire < time()) {
+    // Expired.
+}
+```
+
+`decodeToken()` returns the array you passed to `buildToken()`, or `null` if the token can't be decoded. A token doesn't expire on its own: if you need an expiry, store it in the data and check it yourself, as above.
+
+---
+
+# Encryption Methods
+
+## Encryption class
+
+### __construct
+
+Description:
+
+The **`__construct`** method reads the encryption key from the config. If `$data` has a `do_token` key, its value becomes the stored string.
+
+Syntax:
+
+```php
+$encryption = new Encryption($data = null);
+```
+
+**Parameters:**
+
+- **`$data`** (optional): An array. Only the `do_token` key is used.
+
+---
+
+### setString
+
+Description:
+
+The **`setString`** method stores the string that `getEncryptedData()` or `getDecryptedData()` works on.
+
+Syntax:
+
+```php
+$encryption->setString($string);
+```
+
+**Parameters:**
+
+- **`$string`**: Plain text to encrypt, or encrypted text to decrypt.
+
+---
+
+### getString
+
+Description:
+
+The **`getString`** method returns the stored string.
+
+Syntax:
+
+```php
+$string = $encryption->getString();
+```
+
+---
+
+### getEncryptedData
+
+Description:
+
+The **`getEncryptedData`** method encrypts the stored string with the configured key.
+
+Syntax:
+
+```php
+$encrypted = $encryption->getEncryptedData();
+```
+
+**Return Value:**
+
+- **`String`**: The encrypted text, base64-encoded.
+- **`false`**: Encryption failed.
+
+---
+
+### getDecryptedData
+
+Description:
+
+The **`getDecryptedData`** method decrypts the stored string with the configured key.
+
+Syntax:
+
+```php
+$plain = $encryption->getDecryptedData();
+```
+
+**Return Value:**
+
+- **`String`**: The decrypted text.
+- **`false`**: Decryption failed.
+
+---
+
+### buildToken
+
+Description:
+
+The **`buildToken`** static method serializes and encrypts an array into a URL-safe token.
+
+Syntax:
+
+```php
+$token = Encryption::buildToken(array $data);
+```
+
+**Parameters:**
+
+- **`$data`**: The data to put in the token.
+
+**Return Value:**
+
+- **`String`**: The token.
+- **`null`**: Building the token failed.
+
+---
+
+### decodeToken
+
+Description:
+
+The **`decodeToken`** static method decrypts a token made by `buildToken()`.
+
+Syntax:
+
+```php
+$data = Encryption::decodeToken(string $token);
+```
+
+**Parameters:**
+
+- **`$token`**: The token string.
+
+**Return Value:**
+
+- **`Array`**: The data passed to `buildToken()`.
+- **`null`**: The token couldn't be decoded.
+
+---
+
+## EncryptFunctions class
+
+### encrypt
+
+Description:
+
+The **`encrypt`** static method encrypts a string with AES-128-CTR and the key you pass.
+
+Syntax:
+
+```php
+$encrypted = EncryptFunctions::encrypt($string, $encryptionKey);
+```
+
+**Parameters:**
+
+- **`$string`**: The text to encrypt.
+- **`$encryptionKey`**: The key.
+
+**Return Value:**
+
+- **`String`**: The encrypted text, base64-encoded.
+- **`false`**: Encryption failed.
+
+---
+
+### decrypt
+
+Description:
+
+The **`decrypt`** static method decrypts a string made by `encrypt()` with the same key.
+
+Syntax:
+
+```php
+$plain = EncryptFunctions::decrypt($encrypted, $decryptionKey);
+```
+
+**Parameters:**
+
+- **`$encrypted`**: The encrypted text.
+- **`$decryptionKey`**: The key used to encrypt it.
+
+**Return Value:**
+
+- **`String`**: The decrypted text.
+- **`false`**: Decryption failed.
+
+---
+
+### generate_hash
+
+Description:
+
+The **`generate_hash`** static method hashes a string. It calls PHP's `hash()`.
+
+Syntax:
+
+```php
+$hash = EncryptFunctions::generate_hash('sha256', $data_string, false);
+```
+
+**Parameters:**
+
+- **`$algo`**: The algorithm, such as `sha256`. See `hash_algos()` for the full list.
+- **`$data_string`**: The string to hash.
+- **`$binary`**: `true` returns raw binary. `false` returns lowercase hex.
+
+**Return Value:**
+
+- **`String`**: The hash.
+
+<aside>
+💡 Don't use it for passwords. Use `password_hash()` and `password_verify()`.
+
+</aside>
+
+---
+
+## Token class
+
+### getAuthorizeToken
+
+Description:
+
+The **`getAuthorizeToken`** static method encrypts the `api_key` from the `<encryption>` section of the config with the configured key.
+
+Syntax:
+
+```php
+$token = Token::getAuthorizeToken();
+```
+
+**Return Value:**
+
+- **`String`**: The encrypted API key.
+- **`false`**: Encryption failed.
+
+---

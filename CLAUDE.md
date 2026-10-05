@@ -113,5 +113,5 @@ The product name is spelled several ways across pages: "DoFramework", "Do Framew
 
 ## Known gaps
 
-- Pages not yet rewritten for framework 0.0.42 still lack front matter and may describe old behaviour: Admin Panel, Core Classes, Docloud, Vue DC UI KIT, most of Modules/ and Modules/Util/, and Email, Localization, Logging, Service Worker and User Device Detection in Essentials/. Check claims against the framework code before relying on them. Adding front matter is a welcome cleanup, but keep it out of unrelated edits.
+- `Vue DC UI KIT.md` documents only 22 of the kit's 68 exported components and has no front matter yet. `Home.md` still carries the 2024 Notion introduction. Every other page was checked against framework 0.0.42.
 - Database migrations are not documented yet. They are unreleased in the framework (0.0.42 has no `Migrator`).

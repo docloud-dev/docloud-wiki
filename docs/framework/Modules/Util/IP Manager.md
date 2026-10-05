@@ -1,10 +1,19 @@
+---
+title: IP Manager
+sidebar_label: IP Manager
+---
+
 # IP Manager
 
 Owner: Nuwan Danushka
 
 # Introduction
 
-Introducing IP Manager: Simplifying IP Address Management within the Do Framework. This module streamlines the retrieval of client and server IP addresses from server environment variables, enhancing security and optimizing network performance seamlessly.
+`IpManager` reads the client's and the server's IP addresses from the server environment (`$_SERVER`). Both methods are static:
+
+```php
+$client_ip = Util::IpManager()::get_client_ip();
+```
 
 ---
 
@@ -14,7 +23,7 @@ Introducing IP Manager: Simplifying IP Address Management within the Do Framewor
 
 Description:
 
-The **`get_client_ip`** method is utilized to retrieve the client's IP address from server environment variables.
+The **`get_client_ip`** method returns the client's IP address. It checks these `$_SERVER` entries in order and returns the first one that is set: `HTTP_CLIENT_IP`, `HTTP_X_FORWARDED_FOR`, `HTTP_X_FORWARDED`, `HTTP_FORWARDED_FOR`, `HTTP_FORWARDED`, `REMOTE_ADDR`.
 
 Syntax:
 
@@ -24,9 +33,13 @@ Util::IpManager()::get_client_ip();
 
 **Return Value:**
 
-- **`String`**: The client's IP address, or **`null`** if it cannot be determined.
+- **`String`**: The value of the first entry found, returned as is.
+- **`null`**: None of the entries is set, for example in a shell or heartbeat run.
 
-This method retrieves the client's IP address from server environment variables. If the IP address cannot be determined, it returns **`null`**.
+<aside>
+⚠️ Every entry except `REMOTE_ADDR` comes from a request header, and any client can send those headers with any value. Don't use this method for security decisions such as allow lists, rate limits or login checks. The value is also not cleaned: behind a proxy chain, `X-Forwarded-For` can hold several comma-separated addresses.
+
+</aside>
 
 ---
 
@@ -34,7 +47,7 @@ This method retrieves the client's IP address from server environment variables.
 
 Description:
 
-The **`get_server_ip`** method is utilized to get the server's IP address.
+The **`get_server_ip`** method returns the server's IP address from `$_SERVER['SERVER_ADDR']`.
 
 Syntax:
 
@@ -44,8 +57,7 @@ Util::IpManager()::get_server_ip();
 
 **Return Value:**
 
-- **`String`**: The server's IP address, or null if it cannot be determined.
-
-This method retrieves the server's IP address from server environment variables. If the IP address cannot be determined, it returns **`null`**.
+- **`String`**: The server's IP address.
+- **`null`**: `SERVER_ADDR` is not set or is empty, for example in a shell run.
 
 ---

@@ -1,10 +1,50 @@
+---
+title: Common Functions
+sidebar_label: Common Functions
+---
+
 # Common Functions
 
 Owner: Nuwan Danushka
 
 # Introduction
 
-Your Essential Toolkit for Simplified Development with Do Framework. From generating domain names with createDomain to parsing HTTP headers with parse headers, Common Functions streamlines a myriad of development tasks. Whether it's decoding emoticons, converting file sizes, or sanitizing input variables, this versatile component offers a comprehensive set of tools to optimize workflows and enhance application functionality. With Common Functions, developers can tackle common challenges effortlessly, ensuring efficient and reliable development processes within the Do Framework ecosystem.
+`CommonFunction` is a grab bag of small helpers: reading the request host and scheme, parsing HTTP headers, resolving relative URLs, converting file sizes, string and encoding helpers, a country list, and input sanitizing and validation.
+
+The methods are instance methods. Get an object through the Util accessor:
+
+```php
+$common_function_obj = Util::CommonFunction();
+```
+
+---
+
+# How to sanitize and validate request data
+
+Use `sanitize` to clean values before you store or echo them, and `validateData` to check that they have the right type.
+
+```php
+$common_function_obj = Util::CommonFunction();
+
+// Sanitize two fields with named filter types
+$clean = $common_function_obj->sanitize($data, [
+    'name'  => 'string',
+    'email' => 'email',
+]);
+
+// Check types on the raw data: returns false when everything is valid
+$error = $common_function_obj->validateData($data, [
+    'email' => FILTER_VALIDATE_EMAIL,
+    'age'   => [
+        'filter'  => FILTER_VALIDATE_INT,
+        'options' => ['options' => ['min_range' => 1, 'max_range' => 120]],
+    ],
+]);
+
+if ($error !== false) {
+    // $error is a message such as "email, age are invalid."
+}
+```
 
 ---
 
@@ -14,7 +54,7 @@ Your Essential Toolkit for Simplified Development with Do Framework. From genera
 
 Description:
 
-The **`createDomain`** method is utilized to create a domain based on the HTTP host. This function retrieves the HTTP host from the server environment variables ($_SERVER).
+The **`createDomain`** method returns the host name of the current request, read from `$_SERVER['HTTP_HOST']`.
 
 Syntax:
 
@@ -24,10 +64,8 @@ $common_function_obj->createDomain();
 
 **Return Value:**
 
-- If the HTTP host is set, it returns the value.
-- Otherwise, it returns false.
-
-This method fetches the HTTP host from the server environment variables ($_SERVER) and returns it, or returns false if it's not set.
+- **`String`**: The host, for example `example.com` or `localhost:8080`.
+- **`false`**: There is no `HTTP_HOST`, for example in a shell or heartbeat run.
 
 ---
 
@@ -35,7 +73,7 @@ This method fetches the HTTP host from the server environment variables ($_SERVE
 
 Description:
 
-The **`requestScheme`** method is utilized to retrieve the request scheme. This function retrieves the request scheme from the server environment variables ($_SERVER).
+The **`requestScheme`** method returns the scheme of the current request, read from `$_SERVER['REQUEST_SCHEME']`.
 
 Syntax:
 
@@ -45,10 +83,8 @@ $common_function_obj->requestScheme();
 
 **Return Value:**
 
-- If the request scheme is set, it returns the value.
-- Otherwise, it returns false.
-
-This method fetches the request scheme from the server environment variables ($_SERVER) and returns it, or returns false if it's not set.
+- **`String`**: `http` or `https`.
+- **`false`**: `REQUEST_SCHEME` is not set. Some servers and proxies don't set it.
 
 ---
 
@@ -56,24 +92,23 @@ This method fetches the request scheme from the server environment variables ($_
 
 Description:
 
-The **`parseHeaders`** method is utilized to parse HTTP headers into an associative array. This function iterates through each header line, splitting it by the first colon encountered. If the header contains a colon, it interprets the text before the colon as the key and the text after the colon as the value. If there's no colon, it assumes it's an HTTP status line and extracts the response code.
+The **`parseHeaders`** method turns a list of raw HTTP header lines into an associative array. Each `Name: value` line becomes a key and value. A line without a colon (the status line, such as `HTTP/1.1 200 OK`) is added with a numeric key, and its status code is stored under `response_code`.
 
 Syntax:
 
 ```php
-$common_function_obj->parseHeaders($headers);
+$response = file_get_contents('https://example.com');
+$headers = $common_function_obj->parseHeaders($http_response_header);
+// ['HTTP/1.1 200 OK', 'response_code' => 200, 'Content-Type' => 'text/html', ...]
 ```
 
 **Parameters:**
 
-- **`$headers`**: The HTTP headers to be parsed.
+- **`$headers`**: An array of header lines, such as PHP's `$http_response_header`.
 
 **Return Value:**
 
-- **`array`**: The parsed headers as an associative array.
-- In case of failure, an empty array is returned.
-
-This method parses HTTP headers into an associative array, interpreting each header line to extract the key-value pairs.
+- **`Array`**: The parsed headers. An empty input gives an empty array.
 
 ---
 
@@ -81,25 +116,23 @@ This method parses HTTP headers into an associative array, interpreting each hea
 
 Description:
 
-The **`rel2abs`** method is utilized to convert a relative URL to an absolute URL based on a base URL. This function takes a relative URL and a base URL and converts the relative URL to an absolute URL.
+The **`rel2abs`** method converts a relative URL to an absolute URL, using a base URL.
 
 Syntax:
 
 ```php
-$common_function_obj->rel2abs($rel, $base);
+$common_function_obj->rel2abs('../img/logo.png', 'https://example.com/docs/page.html');
+// "https://example.com/img/logo.png"
 ```
 
 **Parameters:**
 
-- **`$rel`**: The relative URL.
+- **`$rel`**: The relative URL. If it already has a scheme, it is returned unchanged.
 - **`$base`**: The base URL.
 
 **Return Value:**
 
-- **`string`**: The absolute URL.
-- In case of failure, an empty string is returned.
-
-This method converts a relative URL to an absolute URL using the provided base URL. If the operation fails, it returns an empty string.
+- **`String`**: The absolute URL.
 
 ---
 
@@ -107,7 +140,7 @@ This method converts a relative URL to an absolute URL using the provided base U
 
 Description:
 
-The **`FindUrlAndParameters`** method is utilized to search for a URL and its parameters in a given string. It extracts the first URL found and parses it to extract its query parameters. Then, it checks if the parameter "Response" is set to "1”
+The **`FindUrlAndParameters`** method finds the first URL in a string and checks whether its query string contains `Response=1`.
 
 Syntax:
 
@@ -117,14 +150,12 @@ $common_function_obj->FindUrlAndParameters($string);
 
 **Parameters:**
 
-- **`$string`**: The string to search for URLs and parameters.
+- **`$string`**: The string to search for a URL.
 
 **Return Value:**
 
-- **`true`** if the "Response" parameter is set to "1".
-- **`false`** otherwise.
-
-This method searches for a URL and its parameters in the given string. It then checks if the "Response" parameter is set to "1" and returns the corresponding boolean value.
+- **`true`**: The first URL has the query parameter `Response` set to `1`.
+- **`false`**: Otherwise, including when the string has no URL.
 
 ---
 
@@ -132,7 +163,7 @@ This method searches for a URL and its parameters in the given string. It then c
 
 Description:
 
-The **`decodeEmoticons`** method is utilized to decode emoticons represented in Unicode escape sequences into UTF-8 characters.
+The **`decodeEmoticons`** method replaces Unicode escape sequences (`\uXXXX`) in a string with the UTF-8 characters they stand for.
 
 Syntax:
 
@@ -142,13 +173,11 @@ $common_function_obj->decodeEmoticons($src);
 
 **Parameters:**
 
-- **`$src`**:  The string containing emoticons represented in Unicode escape sequences.
+- **`$src`**: The string containing escape sequences.
 
 **Return Value:**
 
-- The string with emoticons is decoded into UTF-8 characters.
-
-This method is used to decode emoticons represented in Unicode escape sequences back into their original UTF-8 characters.
+- **`String`**: The string with the escapes decoded.
 
 ---
 
@@ -156,24 +185,23 @@ This method is used to decode emoticons represented in Unicode escape sequences 
 
 Description:
 
-The **`sizeConverter`** method is utilized to convert a size value from one unit to another.
+The **`sizeConverter`** method converts a size in `B`, `KB`, `MB`, `GB` or `TB` to **bytes**, using 1024 as the step. It converts only to bytes, never between other units.
 
 Syntax:
 
 ```php
-$common_function_obj->sizeConverter($value, $unit);
+$bytes = $common_function_obj->sizeConverter(2, 'MB');   // 2097152
 ```
 
 **Parameters:**
 
-- **`$value`**: The size value to convert.
-- **`$src`**:  The unit of the size value (e.g., MB, GB).
+- **`$value`**: The size, as a number or numeric string.
+- **`$unit`**: The unit of `$value`: `B`, `KB`, `MB`, `GB` or `TB`. Case matters: `mb` is not recognised.
 
 **Return Value:**
 
-- The converted size value.
-
-This method is used to convert a size value from one unit to another. For example, converting from megabytes to gigabytes.
+- **`Integer`** or **`Float`**: The size in bytes.
+- **`false`**: The unit is not recognised.
 
 ---
 
@@ -181,12 +209,13 @@ This method is used to convert a size value from one unit to another. For exampl
 
 Description:
 
-The **`stringWithSquareBracket`** method is utilized to extract text enclosed within square brackets from an input string.
+The **`stringWithSquareBracket`** method extracts every piece of text enclosed in square brackets from a string.
 
 Syntax:
 
 ```php
-$common_function_obj->stringWithSquareBracket($text);
+$common_function_obj->stringWithSquareBracket('Hello [name], your code is [code]');
+// ['[name]', '[code]']
 ```
 
 **Parameters:**
@@ -195,9 +224,7 @@ $common_function_obj->stringWithSquareBracket($text);
 
 **Return Value:**
 
-- An array containing text enclosed within square brackets, including the square brackets themselves.
-
-This method is used to extract text enclosed within square brackets from an input string. For example, it can be used to extract metadata or specific identifiers enclosed within square brackets.
+- **`Array`**: Each bracketed piece, including the brackets.
 
 ---
 
@@ -205,12 +232,13 @@ This method is used to extract text enclosed within square brackets from an inpu
 
 Description:
 
-The **`stringWithoutSquareBracket`** method is utilized to remove text enclosed within square brackets from a given string.
+The **`stringWithoutSquareBracket`** method removes every bracketed piece, brackets included, from a string.
 
 Syntax:
 
 ```php
-$common_function_obj->stringWithoutSquareBracket($text);
+$common_function_obj->stringWithoutSquareBracket('Total [draft] 100');
+// "Total  100"
 ```
 
 **Parameters:**
@@ -219,9 +247,7 @@ $common_function_obj->stringWithoutSquareBracket($text);
 
 **Return Value:**
 
-- **`string`**: The input string with text enclosed within square brackets removed.
-
-This method is used to remove text enclosed within square brackets from an input string. For example, it can be used to extract metadata or specific identifiers enclosed within square brackets.
+- **`String`**: The input string without the bracketed text.
 
 ---
 
@@ -229,9 +255,7 @@ This method is used to remove text enclosed within square brackets from an input
 
 Description:
 
-The **`convert_from_latin1_to_utf8_recursively`** method is utilized to recursively convert data from 
-
-ISO-8859-1 (Latin-1) encoding to UTF-8 encoding.
+The **`convert_from_latin1_to_utf8_recursively`** method converts strings from ISO-8859-1 (Latin-1) to UTF-8. It walks through arrays and object properties recursively.
 
 Syntax:
 
@@ -241,13 +265,11 @@ $common_function_obj->convert_from_latin1_to_utf8_recursively($data);
 
 **Parameters:**
 
-- **`$data`**: The input data (string, array, or object) to be converted.
+- **`$data`**: A string, array or object.
 
 **Return Value:**
 
-- **`string`**: The converted data with strings converted to UTF-8.
-
-This function recursively traverses through the input data and converts any strings found from ISO-8859-1 encoding to UTF-8 encoding.
+- **`Mixed`**: The same structure with every string converted. Values that are not strings, arrays or objects are returned unchanged. Objects are changed in place.
 
 ---
 
@@ -255,7 +277,7 @@ This function recursively traverses through the input data and converts any stri
 
 Description:
 
-The **`detectEncoding`** method is utilized to detect the encoding of a string.
+The **`detectEncoding`** method detects the encoding of a string with `mb_detect_encoding`, trying every encoding that mbstring supports.
 
 Syntax:
 
@@ -265,14 +287,12 @@ $common_function_obj->detectEncoding($string);
 
 **Parameters:**
 
-- `$string`:  The input string to detect encoding.
+- **`$string`**: The input string.
 
 **Return Value:**
 
-- **`string`**: The detected encoding of the string
-- **`false`:** if the encoding could not be determined.
-
-This function detects the encoding of the input string using the mb_detect_encoding function with a list of supported encodings.
+- **`String`**: The detected encoding.
+- **`false`**: The encoding could not be determined.
 
 ---
 
@@ -280,7 +300,7 @@ This function detects the encoding of the input string using the mb_detect_encod
 
 Description:
 
-The **`varSanitize`** method is utilized to sanitize a variable by extracting URLs from it.
+The **`varSanitize`** method extracts every `http` or `https` URL from a string. Despite its name, it does not clean the input. Use `sanitize` for that.
 
 Syntax:
 
@@ -290,14 +310,11 @@ $common_function_obj->varSanitize($var);
 
 **Parameters:**
 
-- `$string`:  The variable to be sanitized.
+- **`$var`**: The string to search.
 
 **Return Value:**
 
-- `Array`: An array containing all URLs extracted from the variable.
-- If no URLs are found, it returns an empty array.
-
-This method extracts URLs from the provided variable and returns them in an array. If no URLs are found, it returns an empty array.
+- **`Array`**: Every URL found. An empty array if there are none.
 
 ---
 
@@ -305,19 +322,18 @@ This method extracts URLs from the provided variable and returns them in an arra
 
 Description:
 
-The **`countryList`** method is utilized to get a list of countries with their corresponding country codes.
+The **`countryList`** method returns a list of countries keyed by ISO 3166-1 alpha-2 code.
 
 Syntax:
 
 ```php
-$common_function_obj->countryList();
+$countries = $common_function_obj->countryList();
+// ['AF' => 'Afghanistan', ..., 'LK' => 'Sri Lanka', ...]
 ```
 
 **Return Value:**
 
-- `Array`: An associative array of countries with country codes as keys and country names as values.
-
-This method returns an associative array containing a list of countries along with their corresponding country codes. The country codes serve as keys, while the country names serve as values.
+- **`Array`**: Country codes as keys and country names as values.
 
 ---
 
@@ -325,7 +341,7 @@ This method returns an associative array containing a list of countries along wi
 
 Description:
 
-The **`smsDivider`** method is utilized to generate an array of start and end dates for SMS messages based on recurring type, start date, and timezone
+The **`smsDivider`** method splits a billing period into monthly start and end dates, based on a recurring type.
 
 Syntax:
 
@@ -335,16 +351,19 @@ $common_function_obj->smsDivider($recurringType, $startDate, $timezone);
 
 **Parameters:**
 
-- **`$recurringType`**:  The type of recurrence (1: Monthly, 2: Quarterly, 3: Half-yearly, 4: Yearly, 5: One-time).
-- **`$startDate`**: The start date for SMS messages.
-- **`$timezone`**: The timezone for date calculations.
+- **`$recurringType`**: `1` monthly, `2` quarterly, `3` half-yearly, `4` yearly, `5` one-time.
+- **`$startDate`**: The start date, in `Y-m-d` format.
+- **`$timezone`**: The time zone for the date calculations.
 
 **Return Value:**
 
-- `Array`:  An array of start and end dates for SMS messages.
-- If no SMS messages are generated, it returns an empty array.
+- **`Array`**: One entry per month, each with `s_date` and `e_date` keys.
+- An empty array if the type is not supported or a date is invalid. The error is logged.
 
-This method generates an array of start and end dates for SMS messages based on the provided recurring type, start date, and timezone.
+<aside>
+⚠️ The periods are not calendar months. The method uses `getNextPayDate`, which moves each month result to the last day of the month (see [Date And Time Manager](Date%20And%20Time%20Manager.md)), and it adds a growing number of months to a start date that has already moved. For example, a quarterly split from `2024-01-15` returns `2024-01-15` to `2024-02-28`, then `2024-02-29` to `2024-04-29`, then `2024-04-30` to `2024-07-30`. Check the output before you rely on it.
+
+</aside>
 
 ---
 
@@ -352,23 +371,89 @@ This method generates an array of start and end dates for SMS messages based on 
 
 Description:
 
-The **`maxValueInArray`** method is utilized to find the maximum value associated with a specific key in a multidimensional array.
+The **`maxValueInArray`** method finds the largest value stored under a given key across the rows of a two-dimensional array.
 
 Syntax:
 
 ```php
-$common_function_obj->maxValueInArray($array, $keyToSearch);
+$rows = [['qty' => 3], ['qty' => 8], ['price' => 10]];
+$common_function_obj->maxValueInArray($rows, 'qty');   // 8
 ```
 
 **Parameters:**
 
-- **`$keyToSearch`**:  The key to search for in the nested arrays.
-- **`$array`:** The multidimensional array to search.
+- **`$array`**: The array of rows to search.
+- **`$keyToSearch`**: The key to look for in each row.
 
 **Return Value:**
 
-- The maximum value associated with the specified key, or NULL if the key is not found in any array.
+- The largest value found under that key, or **`null`** if no row has the key.
 
-This method searches through a multidimensional array to find the maximum value associated with the specified key. If the key is not found in any array, it returns **`NULL`**.
+---
+
+### sanitize
+
+Description:
+
+The **`sanitize`** method cleans an array of input with PHP's `filter_var_array`. With no field list, it applies one filter to every value. With a field list, it applies a named filter type to each listed field.
+
+Syntax:
+
+```php
+// Escape every value (and every value inside nested arrays)
+$clean = $common_function_obj->sanitize($inputs);
+
+// Sanitize selected fields only
+$clean = $common_function_obj->sanitize($inputs, ['name' => 'string', 'email' => 'email']);
+```
+
+**Parameters:**
+
+- **`$inputs`**: The array to sanitize, for example the request data.
+- **`$fields`**: Optional. Maps each field name to a filter type name. The built-in types are:
+  - **`string`**: `FILTER_SANITIZE_FULL_SPECIAL_CHARS` (HTML special characters escaped).
+  - **`string[]`**: The same filter, for a field that holds an array of strings.
+  - **`email`**: `FILTER_SANITIZE_EMAIL`.
+  - **`int`**: `FILTER_SANITIZE_NUMBER_INT` (keeps digits, `+` and `-`).
+- **`$default_filter`**: The filter used when `$fields` is empty. Default: `FILTER_SANITIZE_FULL_SPECIAL_CHARS`.
+- **`$filters`**: Optional. Your own map of type names to filters, used instead of the built-in types. The format matches the definitions accepted by `filter_var_array`.
+
+**Return Value:**
+
+- **`Array`**: The sanitized data. With a field list, the result holds **only** the listed fields. A listed field missing from the input is returned as `null`.
+
+---
+
+### validateData
+
+Description:
+
+The **`validateData`** method checks values in an array against `filter_var` validation filters and reports the fields that fail.
+
+Syntax:
+
+```php
+$error = $common_function_obj->validateData($data, [
+    'email' => FILTER_VALIDATE_EMAIL,
+    'age'   => ['filter' => FILTER_VALIDATE_INT, 'options' => ['options' => ['min_range' => 1]]],
+]);
+```
+
+**Parameters:**
+
+- **`$data`**: The array to check.
+- **`$validation_rules`**: Maps each field name to a rule. A rule is either a filter constant or an array with a `filter` key and an optional `options` key. `options` is passed to `filter_var` as its third argument, so it uses the same `options` and `flags` keys.
+
+**Return Value:**
+
+- **`false`**: Every field that has a rule and is present in `$data` passed.
+- **`String`**: A message listing the failed fields, such as `age is invalid.` or `email, age are invalid.`
+
+Fields that have a rule but are missing from `$data` are skipped, not reported. Check required fields separately. `FILTER_VALIDATE_BOOLEAN` reports a valid `false` value as a failure.
+
+<aside>
+💡 On PHP 8.2 and later, each passing field raises a "Creation of dynamic property" deprecation notice, which shows up in the log when deprecations are reported. The validation result is not affected.
+
+</aside>
 
 ---

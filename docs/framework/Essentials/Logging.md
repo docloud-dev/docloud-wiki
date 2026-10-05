@@ -1,121 +1,224 @@
+---
+title: Logging
+sidebar_label: Logging
+---
+
 # Logging
 
 Owner: Nuwan Danushka
 
-# Log Types
+# Introduction
 
-1. **LOG_WARN** (Warning): 
+The framework keeps four logs:
 
-- Indicates a potential issue or concern that might need attention but does not necessarily halt the program's execution.
-
-2. **LOG_ERROR**: 
-
-- Indicates a significant problem that occurred during the execution of the program, which may affect its functionality.
-
-3. **LOG_NOTICES** (Notice): 
-
-- Provides general information about the program's operation, often used for informational purposes.
-
-4. **LOG_EXCEPTION**: 
-
-- Marks an unexpected event or error that caused the program to deviate from its normal flow of execution.
-
-5. **LOG_CRITICAL**: 
-
-- This signifies a severe error or problem that requires immediate attention as it may lead to system failure.
+| Log | Written by | Stored in | Viewed in |
+| --- | --- | --- | --- |
+| Error log | `System::errorlog()` | The `error_log` table of the SQLite file `api/db/do.db` | Admin panel, **Logs > Errors** |
+| Access log | `System::acesslog()` | The `access_log` table of the main database | No viewer. Query the table. |
+| Admin activity log | The framework, for admin-panel `POST` requests | The main database | Admin panel, **Logs > Admin activity** |
+| PHP debug log | PHP's `error_log()` and PHP errors | `api/logs/debug.log` | The file |
 
 ---
 
-# How To Log Errors
+# Log types
 
-Logging errors is typically achieved by utilizing the try-catch method to capture exceptions. Within our framework, we employ a custom logging method to handle exceptions.
+Pass one of these constants as the type of an error log entry. Each stores the string shown.
 
-```php
-Loging::log($e->getMessage(), 'class name ', LOG_WARN)
-```
+| Constant | Stored as | Use it for |
+| --- | --- | --- |
+| `LOG_NOTICES` | `NOTICE` | Information about normal operation. |
+| `LOG_WARN` | `WARNING` | A problem that doesn't stop the request. |
+| `LOG_ERROR` | `ERROR` | A failure that affects what the request does. |
+| `LOG_EXCEPTION` | `EXCEPTION` | A caught exception. |
+| `LOG_CRITICAL` | `CRITICAL` | A failure that needs attention now. |
 
-The parameters for this method include:
+---
 
-- **`text`**: The error message or description.
-- **`class name`**: The name of the class where the error occurred.
-- **`log type`**: The type of log entry
-    - Types
-        - `LOG_ERROR`
-        - `LOG_WARN`
-        - `LOG_NOTICES`
-        - `LOG_EXCEPTION`
-        - `LOG_CRITICAL`
+# How to log errors
 
-Here's an example of how this logging method is used within a try-catch block:
+Create the entry with `Loging::log()` and save it with `System::errorlog()`. `Loging::log()` on its own only builds the entry; nothing is saved until you pass it to `System::errorlog()`.
 
 ```php
 try {
-    // Code block where errors might occur
+    // code that can fail
 } catch (Exception $e) {
-    System::errorlog(Loging::log($e->getMessage(), 'class name ', LOG_WARN));
+    System::errorlog(Loging::log($e->getMessage(), 'myappController:save_order', LOG_WARN));
     return;
 }
 ```
 
-In this example, when an exception is caught, the error message along with the class name is logged using the **`Loging::log()`** method, and the log entry is marked as a warning. Finally, the error log is handled by the **`System::errorlog()`** method.
+The entry goes into the `error_log` table of `api/db/do.db` with the class name, message, type and time. The table's file column always holds the path of the framework's `Loging` class, not your file, so make the class name say where the error happened (`class:method` works well).
+
+When `<log_db>` is on, the entries a request logs are also added to its JSON response under `errors`. See [Architecture](../Architecture.md).
+
+<aside>
+⚠️ `System::log()` is deprecated. It writes to the text file set by `<logs_dir>` and `<log_file>` (`api/logs/log.txt` by default), which nothing else uses and the admin panel doesn't show. Use `System::errorlog()`.
+
+</aside>
 
 ---
 
-# How To Enable Mail Errors
+# How to get errors by email
 
-Here are steps to enable email notifications for errors:
+The framework can email each error log entry of chosen types to the admin.
 
-1. **Access the Admin Panel**: 
-    - Log in to your system's admin panel.
-2. **Navigate to Settings**: 
-    - Look for the "Settings" section within the admin panel.
-3. **Find Logs Settings**: 
-    - Once you're in the settings, locate the logs. It is labeled as "Logs".
-4. **Select Mail Error Option**: 
-    - Within the logs settings, there should be a selection for mailing errors. Find it and select it.
-5. **Choose "Yes"**:
-    - When you find the mail error option, there will be a dropdown. Choose the option “Yes”
-6. **Select Error Types**: 
-    - Checkbox option to choose which types of errors you want to receive emails for. Select the error types you're interested in.
-7. **Update Settings**: 
-    - After choosing your preferences, Click the button update to apply the changes.
-    
+1. In the admin panel, open **Settings > Logs**.
+2. Set **Mail The Errors** to **Yes**.
+3. Tick the types to send, for example `CRITICAL`.
+4. Click **Update**.
 
-Now, whenever an error occurs within the framework, you'll receive an email notification with the details of the error.
+The email goes to `<admin_email>` under `<admin>` in `api/config.<environment>.xml`, from `<system_email>`. It's sent with PHP's `mail()`, whatever `<email_provider>` is set to, so the server must be able to send mail. One email is sent per entry.
 
 ---
 
-# **How To View Logs**
+# How to view logs
 
-To access and view logs, follow these steps:
-
-1. **Log in to Admin Panel**: 
-    - Access the admin panel using your credentials.
-2. **Navigate to Logs**: 
-    - Look for a section or tab labeled "Logs" within the admin panel interface.
-3. **View Error Logs**: 
-    - Once in the logs section, you'll typically find error logs listed along with details such as class name, message, type, date, and time.
-
-By following these steps, you can easily locate and review error logs, allowing you to diagnose issues and monitor system behavior effectively.
+- **Errors**: in the admin panel, open **Logs**. The **Errors** tab lists the error log with class name, message, type and date. You can search it and sort it by column.
+- **Admin activity**: the **Admin activity** tab of the same page. It shows only to admins with the `get_admin_activity` permission.
+- **PHP errors**: read `api/logs/debug.log` on the server. API requests send PHP's `error_log()` output there. Errors raised outside an API request, for example in the shell or heartbeat, go wherever PHP's own `error_log` setting points.
 
 ---
 
-# Access Log
+# Access log
 
-An access log is a system mechanism that records user actions within a Do framework. It stores data such as device information, IP addresses, messages, and actions performed by users. This log helps track user activity for troubleshooting, security analysis, and auditing purposes.
-
-## How To Log Access Log
-
-To log access activities, you can utilize the provided function as follows:
+The access log records what users did, for auditing. Each entry holds the action, the action type, a message, the client IP, device details and the session's user ID.
 
 ```php
-System::acesslog(Loging::AccessLog('Create Task', 'Create', 'Task Create Successfully'));
+System::acesslog(Loging::AccessLog('Create Task', 'create', 'Task created'));
 ```
 
-### **Parameters:**
+**Parameters:**
 
-- **`$action`**: Pass the specific action that triggered the logging, for example, 'create user'.
-- **`$actionType`**: Specify the type of action performed, like 'create', 'delete', or 'update'.
-- **`$message`**: Include a descriptive message indicating the outcome of the action, for instance, 'User Created Successfully'.
+- **`$action`**: What happened, for example `Create Task`.
+- **`$actionType`**: The kind of action, such as `create`, `update` or `delete`.
+- **`$message`**: A description of the outcome.
 
-This logging mechanism allows you to efficiently track user interactions and outcomes within the framework.
+The user ID comes from the session key named in `<system_access_log_session_id>` (`USER_ID` by default). Entries go into the `access_log` table of the main database, so the system needs `<db_access>` on.
+
+<aside>
+⚠️ `System::acesslog()` always returns `false`, even when the entry was saved. Don't use its return value. If saving fails, the reason is written to the error log.
+
+</aside>
+
+---
+
+# Admin activity log
+
+The admin panel records every state-changing request an admin makes: the admin, the app and action, the outcome and the request fields, with secrets masked. `POST` requests that your admin pages send with `fetch()` are recorded automatically. Call `AdminActivity::describe()` in your action to add a line saying what changed:
+
+```php
+AdminActivity::describe('Archived order ' . $order_id);
+```
+
+Admins read the log on the **Admin activity** tab of the Log Viewer. Entries are kept for `<admin_activity_retention_days>` days under `<logs>`, 365 by default, set on **Settings > Logs**.
+
+See [Admin Pages](../Building%20Apps/Admin%20Pages.md#what-is-recorded) for what is recorded and what isn't.
+
+---
+
+# Log settings
+
+The `<logs>` block of `api/config.<environment>.xml` holds the log settings. Most can be changed on **Settings > Logs** in the admin panel. See [Configuration Files](./Configuration%20Files.md).
+
+```xml
+<logs>
+  <logs_dir>logs</logs_dir>
+  <log_file>log.txt</log_file>
+  <log_level>1</log_level>
+  <log_db>true</log_db>
+  <mail_logs>true</mail_logs>
+  <email_log_type>
+    <log_type>CRITICAL</log_type>
+  </email_log_type>
+  <local_db_log_dir>db</local_db_log_dir>
+  <local_db_log_file>do.db</local_db_log_file>
+  <admin_activity_retention_days>365</admin_activity_retention_days>
+</logs>
+```
+
+| Key | Admin panel label | Effect |
+| --- | --- | --- |
+| `<logs_dir>`, `<log_file>` | Logs Directory, Log File Name | The text log written by the deprecated `System::log()`, relative to `api/`. |
+| `<log_level>` | Log Level | Stored, but not read by the framework. |
+| `<log_db>` | Save Logs to DB | When on, a request's logged entries are added to its API response under `errors`, and module health-check errors are logged. Error log entries are saved to SQLite either way. |
+| `<mail_logs>` | Mail The Errors | Email error log entries to the admin. |
+| `<email_log_type>` | The type checkboxes | One `<log_type>` per type to email: `NOTICE`, `WARNING`, `ERROR`, `EXCEPTION` or `CRITICAL`. |
+| `<local_db_log_dir>`, `<local_db_log_file>` | | The SQLite file for the error log, relative to `api/`. |
+| `<admin_activity_retention_days>` | Keep admin activity for (days) | How long admin activity entries are kept. |
+
+<aside>
+⚠️ Turn `<log_db>` off in production. While it's on, every API response that logged something carries the log messages, including exception text, to the browser.
+
+</aside>
+
+---
+
+# Methods
+
+### Loging::log
+
+Description:
+
+The **`Loging::log`** method builds an error log entry. Pass it to `System::errorlog()` to save it.
+
+Syntax:
+
+```php
+$log = Loging::log('Payment failed', 'myappController:pay', LOG_ERROR);
+```
+
+**Parameters:**
+
+- **`$text`**: The message.
+- **`$className`**: Where it happened.
+- **`$type`**: One of the log type constants.
+
+**Return Value:**
+
+- **`Log`**: The entry.
+
+---
+
+### System::errorlog
+
+Description:
+
+The **`System::errorlog`** method saves an entry to the error log, adds it to the request's log list and, when `<mail_logs>` is on and the type is selected, emails it to the admin.
+
+Syntax:
+
+```php
+System::errorlog(Loging::log($e->getMessage(), 'myappController:pay', LOG_EXCEPTION));
+```
+
+**Parameters:**
+
+- **`$log`**: A `Log` from `Loging::log()`.
+
+**Return Value:**
+
+- **`Boolean`**: `true`.
+
+---
+
+### System::acesslog
+
+Description:
+
+The **`System::acesslog`** method saves an entry to the access log.
+
+Syntax:
+
+```php
+System::acesslog(Loging::AccessLog('Delete Task', 'delete', 'Task 42 deleted'));
+```
+
+**Parameters:**
+
+- **`$log`**: An `AccessLog` from `Loging::AccessLog($action, $actionType, $message)`.
+
+**Return Value:**
+
+- **`Boolean`**: Always `false`. See the note above.
+
+---

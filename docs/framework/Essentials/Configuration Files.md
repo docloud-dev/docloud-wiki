@@ -324,14 +324,14 @@ The per-environment overlay, `api/config.<environment>.xml`. Setup generates it 
     <system_name><your-system-name></system_name>
     <system_email><admin@example.com></system_email>
     <!-- PHP time zone name, used for date conversion. -->
-    <system_api_timezone>UTC</system_api_timezone>
+    <system_api_timezone>Asia/Colombo</system_api_timezone>
     <system_app_structure>1</system_app_structure>
     <!-- Folder that holds the apps, relative to api/ (backend)
          and to the site root (frontend). -->
     <system_app_directory>apps</system_app_directory>
     <system_app_folder_depth>1</system_app_folder_depth>
     <system_api_charset>UTF-8</system_api_charset>
-    <!-- LOCAL | SMTP | AWS -->
+    <!-- LOCAL or SMTP. AWS is accepted but sends through LOCAL. -->
     <email_provider>SMTP</email_provider>
     <!-- LOCAL | S3 -->
     <system_storage_type>LOCAL</system_storage_type>
@@ -384,7 +384,7 @@ The per-environment overlay, `api/config.<environment>.xml`. Setup generates it 
       <smtp_password><smtp-password></smtp_password>
       <smtp_port><smtp-port></smtp_port>
     </smtp>
-    <!-- Used when email_provider is AWS (Amazon SES). -->
+    <!-- Written by the admin panel for the AWS provider, but no backend reads it yet: AWS falls back to LOCAL. -->
     <aws>
       <ses_access_key/>
       <ses_access_secret/>

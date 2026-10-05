@@ -87,7 +87,7 @@ On the next run the task is saved as a recurrent application task. If you remove
 
 # How to change a task from the admin panel
 
-The admin panel's **Heartbeat** page lists every task, with its type, frequency, status and last result. From there an admin can add, edit and delete tasks, and read each task's execution log.
+The admin panel's **Scheduler** page lists every task, with its type, frequency, status and last result. From there an admin can add, edit and delete tasks, and read each task's execution log.
 
 On every run the heartbeat rewrites an application task's frequency and status from the scheduler class. So an admin's edits to an app's task last only if the app calls `->setAdminPanel(true)` on that task. Then the heartbeat keeps the frequency and status saved in the database, and uses the class's frequency only when it first creates the task.
 
@@ -239,7 +239,7 @@ self::job('sync_orders')->setAdminPanel(true);
 
 Description:
 
-The **`log`** method adds an entry to the task's execution log, which the admin panel's Heartbeat page shows. The heartbeat already logs the start and end of each run, each callback, and the task method's return value.
+The **`log`** method adds an entry to the task's execution log, which the admin panel's Scheduler page shows. The heartbeat already logs the start and end of each run, each callback, and the task method's return value.
 
 Syntax:
 

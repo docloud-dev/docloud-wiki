@@ -1,303 +1,381 @@
+---
+title: Curl
+sidebar_label: Curl
+---
+
 # Curl
 
 Owner: Nuwan Danushka
 
 # Introduction
 
-The cURL module in DoFramework serves as a versatile tool for interacting with web services by facilitating straightforward communication with servers using different protocols. With cURL, you can effortlessly make HTTP requests to specified URLs, customize requests with options like headers and timeouts, and handle responses effectively. Whether you need to perform GET or POST requests, cURL provides a simple and powerful interface. The library also offers functions such as **`curl_getinfo()`** for retrieving details about the request and **`curl_close()`** to tidy up and release resources. In essence, cURL streamlines the process of connecting to web services, making it a valuable asset for developers working on various web applications.
+The `Curl` module wraps PHP's cURL functions for calling HTTP APIs. It sends GET, POST, PUT and DELETE requests, sets headers and authentication, and decodes JSON responses for you.
+
+The module is loaded automatically. Create an instance with `new Curl()` from any controller or class.
+
+A new instance starts with these defaults:
+
+- Returns the response body instead of printing it.
+- Follows redirects, up to 10.
+- Times out after 30 seconds.
+- Uses HTTP/1.1 and accepts any response encoding the server supports.
+
+Change any of them with `setOption()`.
 
 ---
 
-# How to send a curl request
-
-This guide outlines the process of sending a get request using the **`Curl`** module in Do Framework.
-
-1. **Initialize cURL**
-First, we need to initialize cURL in PHP. This can be done by creating a new instance of the `Curl` class.
-    
-    ```php
-    $curl = new Curl();
-    
-    ```
-    
-2. **Set the URL**
-Set the URL to which the cURL request will be sent.
-    
-    ```php
-    $curl_url = "<https://example.com/api>"; // Replace this with the actual URL
-    
-    ```
-    
-3.  Set URL in cURL Instance
-    
-    Assign the URL to the cURL instance using the **`setURL()`** method.
-    
-    ```php
-    $curl->setURL($curl_url);
-    
-    ```
-    
-4. **Send GET Request**
-Now, we'll send a GET request to the specified URL and store the response data.
-    
-    ```php
-    $response_data = $curl->get();
-    
-    ```
-    
-5. **Close cURL**
-After the request is made, it's good practice to close the cURL connection.
-    
-    ```php
-    $curl->close();
-    
-    ```
-    
-
-**Complete Example:**
-Putting it all together, here's the complete code:
+# How to send a GET request
 
 ```php
-// Step 1: Initialize cURL
-$curl = new Curl();
-
-// Step 2: Set the URL
-$curl_url = "<https://example.com/api>"; // Replace this with the actual URL
-
-// Step 3: Set URL in cURL Instance
-$curl->setURL($curl_url);
-
-// Step 4: Send GET Request
-$response_data = $curl->get();
-
-// Step 5: Close cURL
+$curl = new Curl('https://example.com/api/items');
+$items = $curl->get();
 $curl->close();
 
+if ($items === false) {
+    // cURL failed, or the response wasn't JSON. Both are logged.
+}
 ```
 
-This code will send a GET request to the specified URL and store the response data. Make sure to replace `"<https://example.com/api>"` with the actual URL you want to send the request to.
+`get()`, `post()`, `put()` and `delete()` decode the response as JSON by default and return an array. They return `false` if the request fails or the body isn't valid JSON, including an empty body. Pass `false` as the `$expectJson` argument to get the raw body as a string instead.
+
+<aside>
+⚠️ An HTTP error status is not a failure. A 404 or 500 with a JSON body is decoded and returned like a 200. Check the status code with `get_info(CURLINFO_HTTP_CODE)` before you trust the result.
+
+</aside>
 
 ---
 
+# How to send a POST request
+
+```php
+$curl = new Curl('https://example.com/api/items');
+$curl->setAuth('bearer', $api_token);
+
+$result = $curl->post(['name' => 'Desk lamp', 'price' => 25], 'json');
+$status = $curl->get_info(CURLINFO_HTTP_CODE);
+$curl->close();
+```
+
+The second argument sets how the body is encoded:
+
+| `$type` | Body | Headers added |
+| --- | --- | --- |
+| `form` (default) | The array is passed to cURL as is, so it's sent as `multipart/form-data`. | None |
+| `json` | `json_encode($data)` | `Content-Type: application/json`, `Accept: application/json` |
+| `urlencoded` | `http_build_query($data)` | `Content-Type: application/x-www-form-urlencoded` |
+
+Any other value throws an `InvalidArgumentException` ("Unsupported format").
+
+---
+
+# How to set headers and authentication
+
+Headers are full header lines, not key/value pairs:
+
+```php
+$curl = new Curl('https://example.com/api/items');
+$curl->setHeaders(['Accept-Language: en', 'X-Request-Id: 42']);
+$curl->setAuth('apikey', $api_key);
+$items = $curl->get();
+```
+
+`setAuth()` supports four types:
+
+| `$type` | `$credentials` | Effect |
+| --- | --- | --- |
+| `basic` | `'username:password'` | Sets `CURLOPT_USERPWD`. |
+| `bearer` | The token | Adds `Authorization: Bearer <token>`. |
+| `apikey` | The key | Adds `X-API-Key: <key>`. |
+| `custom` | A header line, or an array of header lines | Adds them as given. |
+
 <aside>
-💡 **Please refer to the methods for usage examples in other contexts.**
+⚠️ For `bearer`, `apikey` and `custom`, `setAuth()` stores the header in both the header list and the auth list, so the request carries it twice. Most servers accept that. Calling `setAuth()` again on the same instance keeps the old header as well, so use a new `Curl` instance when the credentials change.
 
 </aside>
+
+---
 
 # Curl Class Methods
 
-## __construct
+### __construct
 
 Description:
 
-The **`__construct`** is the class constructor for the **`Curl`** class. This function initializes the cURL instance and sets the default necessary options to the object.
+The **`__construct`** method starts a cURL session and applies the defaults listed in the introduction.
 
 Syntax:
 
 ```php
-$curl_manager = new Curl($url = null);
+$curl = new Curl($url = null);
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$url`: The URL for the cURL request.**
-
-This function provides a convenient way to create a new instance of the **`Curl`** class and set the initial URL for cURL requests.
+- **`$url`** (optional): The request URL. You can set it later with `setURL()`.
 
 ---
 
-## setURL
+### setURL
 
 Description:
 
-The **`setURL`** method is used to set the URL for the cURL request in the **`Curl`** class.
+The **`setURL`** method sets the URL for the next request.
 
 Syntax:
 
 ```php
-$curl_manager->setURL($url);
+$curl->setURL($url);
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$url`: The URL for the cURL request.**
-
-This method provides a convenient way to update the URL for cURL requests in an existing **`Curl`** instance.
+- **`$url`**: The request URL.
 
 ---
 
-## setOption
+### setOption
 
 Description:
 
-The **`setOption`** method is used to set a cURL option for the **`Curl`** class.
+The **`setOption`** method sets any cURL option on the session.
 
 Syntax:
 
 ```php
-$curl_manager->setOption($option, $value);
+$curl->setOption(CURLOPT_TIMEOUT, 60);
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$option`: The name of the cURL option.**
-- **`$value`: The value to set for the cURL option.**
+- **`$option`**: A `CURLOPT_*` constant.
+- **`$value`**: The value for the option.
 
 <aside>
-💡  For a list of cURL options and their values, refer to [PHP manual - curl_setopt](https://www.php.net/manual/en/function.curl-setopt.php)
+💡 For the list of options, see [curl_setopt in the PHP manual](https://www.php.net/manual/en/function.curl-setopt.php).
 
 </aside>
 
-This method provides a convenient way to set cURL options for a specific cURL request in an existing **`Curl`** instance.
-
 ---
 
-## get
+### setHeaders
 
 Description:
 
-The **`get`** method is used to perform a GET request using the **`Curl`** class.
+The **`setHeaders`** method sets request headers. Headers stay set for every later request on the same instance.
 
 Syntax:
 
 ```php
-$response = $curl_manager->get();
+$curl->setHeaders(['Accept: application/json'], $merge = true);
 ```
 
-**Returns:**
+**Parameters:**
 
-- An array containing the response.
-- **`false`** if the operation is not successful.
-
-**Usage Example** 
-
-```php
-	$curl = new Curl();
-  $curl->setURL($curl_url);
-  $response_data = $curl->get();
-  $curl->close();
-```
-
-This method provides a convenient way to perform GET requests using an existing **`Curl`** instance. The response is returned as an array, and **`false`** is returned in case of an unsuccessful operation.
+- **`$headers`**: An array of header lines, such as `'Accept: application/json'`.
+- **`$merge`** (optional, default `true`): `true` adds the headers to the ones already set. `false` replaces them.
 
 ---
 
-## post
+### setAuth
 
 Description:
 
-The **`post`** method is used to perform a POST request using the **`Curl`** class.
-
-The **`$postData`** array should adhere to the following format:
-
-```php
-$postData= array(
-    "id" => "1",
-    "name" => "John",
-    // Add more columns as needed
-);
-```
+The **`setAuth`** method sets the credentials for the request. The types are listed under "How to set headers and authentication" above. An unknown type changes nothing.
 
 Syntax:
 
 ```php
-$response = $curl_manager->post($postData);
+$curl->setAuth('basic', 'username:password');
+$curl->setAuth('bearer', $token);
+$curl->setAuth('apikey', $key);
+$curl->setAuth('custom', ['X-Client-Id: 123', 'X-Client-Secret: abc']);
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$postData`**: An array containing the POST data.
-
-**Returns:**
-
-- An array containing the response.
-- **`false`** if the operation is not successful.
-
-**Usage Example** 
-
-```php
-	$postData= array(
-    "id" => "1",
-    "name" => "John"
-);
-
-	$curl = new Curl();
-  $curl->setURL($curl_url);
-  $response = $curl_manager->post($postData);
-  $curl->close();
-```
-
-This method provides a convenient way to perform POST requests using an existing **`Curl`** instance. The response is returned as an array, and **`false`** is returned in case of an unsuccessful operation.
+- **`$type`**: `basic`, `bearer`, `apikey` or `custom`.
+- **`$credentials`**: A string, or for `custom` a string or an array of header lines.
 
 ---
 
-## exec
+### get
 
 Description:
 
-The **`exec`** method is used to execute the cURL request in the **`Curl`** class.
+The **`get`** method sends a GET request.
 
 Syntax:
 
 ```php
-$curl_manager->exec();
+$response = $curl->get($expectJson = true);
 ```
 
-**Returns:**
+**Parameters:**
 
-- A string containing the response.
-- **`false`** if the operation is not successful.
+- **`$expectJson`** (optional, default `true`): Decode the body as JSON.
 
-This method provides a convenient way to execute the cURL request.
+**Return Value:**
+
+- **`Array`**: The decoded body, when `$expectJson` is `true`.
+- **`String`**: The raw body, when `$expectJson` is `false`.
+- **`false`**: The request failed, or `$expectJson` is `true` and the body isn't valid JSON. The error is logged.
 
 ---
 
-## close
+### post
 
 Description:
 
-The `close` method is used to close the cURL connection.
+The **`post`** method sends a POST request with `$data` encoded as `$type`.
 
 Syntax:
 
 ```php
-$curl_manager->close();
+$response = $curl->post(array $data, string $type = 'form', $expectJson = true);
 ```
 
-This method provides a convenient way to close the cURL connection.
+**Parameters:**
+
+- **`$data`**: The fields to send.
+- **`$type`** (optional): `form` (default), `json` or `urlencoded`. See the table under "How to send a POST request".
+- **`$expectJson`** (optional, default `true`): Decode the body as JSON.
+
+**Return Value:**
+
+- The same as `get()`.
 
 ---
 
-## get_info
+### put
 
 Description:
 
-The **`get_info`** method is used to retrieve information about the cURL request in the **`Curl`** class.
+The **`put`** method sends a PUT request with `$data` encoded as `$format`.
 
 Syntax:
 
 ```php
-$curl_manager->get_info($option);
+$response = $curl->put(['name' => 'Desk lamp'], 'json');
 ```
 
-**Parameters**:
+**Parameters:**
 
-- **`$option`**: The option for cURL info options.
+- **`$data`**: An array of fields to send.
+- **`$format`**: `form`, `json` or `urlencoded`, as for `post()`.
+- **`$expectJson`** (optional, default `true`): Decode the body as JSON.
+
+**Return Value:**
+
+- The same as `get()`.
 
 <aside>
-💡 For a list of cURL get info options and their values, refer to [cURL get info](https://www.php.net/manual/en/function.curl-getinfo.php).
+⚠️ Always pass the format. The second parameter defaults to `false`, which is not a valid format, so `put($data)` throws an `InvalidArgumentException` ("Unsupported format").
 
 </aside>
 
-**Usage Example** 
+---
+
+### delete
+
+Description:
+
+The **`delete`** method sends a DELETE request.
+
+Syntax:
 
 ```php
-  $curl = new Curl();
-  $curl->setURL($curl_url);
-  $info = $curl_manager->get_info($option);
-  $curl->close();
+$response = $curl->delete($expectJson = true);
 ```
 
-This method provides a convenient way to retrieve information about the cURL request.
+**Parameters:**
+
+- **`$expectJson`** (optional, default `true`): Decode the body as JSON.
+
+**Return Value:**
+
+- The same as `get()`.
+
+---
+
+### exec
+
+Description:
+
+The **`exec`** method runs the session as it is configured, with no JSON decoding. It doesn't set the request method, so use it after `setOption()` calls of your own.
+
+Syntax:
+
+```php
+$body = $curl->exec();
+```
+
+**Return Value:**
+
+- **`String`**: The raw body.
+- **`false`**: The request failed.
+
+---
+
+### get_info
+
+Description:
+
+The **`get_info`** method returns information about the last request, such as the HTTP status code.
+
+Syntax:
+
+```php
+$curl = new Curl('https://example.com/api/items');
+$items = $curl->get();
+$status = $curl->get_info(CURLINFO_HTTP_CODE);
+$all = $curl->get_info();
+$curl->close();
+```
+
+**Parameters:**
+
+- **`$option`** (optional): A `CURLINFO_*` constant. Leave it out to get every value.
+
+**Return Value:**
+
+- The value for `$option`, or an array of all values.
+
+<aside>
+💡 For the list of options, see [curl_getinfo in the PHP manual](https://www.php.net/manual/en/function.curl-getinfo.php).
+
+</aside>
+
+---
+
+### get_error
+
+Description:
+
+The **`get_error`** method returns the cURL error message from the last request.
+
+Syntax:
+
+```php
+$error = $curl->get_error();
+```
+
+**Return Value:**
+
+- **`String`**: The error message.
+- **`null`**: There was no error.
+
+---
+
+### close
+
+Description:
+
+The **`close`** method closes the cURL session. Don't use the instance after this.
+
+Syntax:
+
+```php
+$curl->close();
+```
 
 ---

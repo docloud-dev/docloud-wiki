@@ -1,45 +1,68 @@
+---
+title: Modules
+sidebar_label: Modules
+---
+
 # Modules
 
 Owner: Nuwan Danushka
 
 # Introduction
 
-The "Modules" feature within the Do Framework offers a versatile toolkit designed to streamline and enhance various functionalities essential for application development and management. These modules, including App Manager, Curl, JSON Manager, Encryption, File Manager, and Util Classes, serve as foundational components empowering developers and system administrators alike. Each module provides specialized capabilities tailored to optimize specific tasks, ranging from data handling to security protocols. By leveraging these modules, users gain access to a comprehensive suite of tools facilitating efficient application development, seamless data processing, and robust system management. With the Modules feature in the Do Framework, users can elevate their workflow, enabling proactive problem resolution, enhanced performance, and a streamlined development process.
+Modules are the framework's reusable backend toolkits. They live in `api/core/Modules/`, are listed under `<modules>` in `api/config.xml`, and are loaded automatically: call them from any controller or class without a `require`. The boot health check refuses to start the system if a listed module is missing (see [Configuration Files](../Essentials/Configuration%20Files.md)).
 
 ---
 
 ## App Manager
 
-The AppManager module streamlines application and database management tasks such as starting and stopping apps, managing user permissions, and accessing app details. It also facilitates smooth communication with the database, allowing for functions to create, update, and retrieve data. This integrated approach offers an organized and user-friendly solution for effective application management, promoting reusability and scalability while maintaining a clear distinction between application logic and database interactions.
+App Manager is how an app works with the framework: table helpers that prefix table names with the app's name, schema install and reinitialization from `<createTables>`, calls into other apps with `CreateAppInstance`, autoloading and the app boot order. It also covers the lower-level schema functions and editing an app's manifest from code.
 
 ---
 
 ## Curl
 
-The cURL module within the Do Framework serves as an indispensable tool for seamless interaction with web services, offering a straightforward means of communication with servers across diverse protocols. With cURL, users can effortlessly initiate HTTP requests to designated URLs, tailor requests using customizable options like headers and timeouts, and efficiently manage responses. Whether executing GET or POST requests, cURL provides an intuitive and robust interface, simplifying the process of interfacing with web services. Additionally, the library offers essential functions such as curl_getinfo() for retrieving request details and curl_close() for resource cleanup. In essence, cURL optimizes the task of connecting to web services, rendering it an invaluable asset for developers engaged in various web application projects.
+Curl wraps PHP's cURL for calling web services. It sends GET, POST, PUT and DELETE requests, posts form, JSON or URL-encoded bodies, sets headers and basic, bearer or API-key authentication, and decodes JSON responses by default.
 
 ---
 
-# JSON Manager
+## Custom Fields
 
-The JSON Manager module in the DoFramework simplifies JSON data handling and file management tasks within applications. Offering a rich array of functions such as json_encode, json_decode, and file-related operations like set_file, it provides a comprehensive toolkit for working with JSON data seamlessly. Designed with a focus on simplicity and clarity, JSON Manager facilitates efficient interaction with JSON data, ensuring ease of use and promoting reusability and scalability. By maintaining a clear separation between application logic and file manipulation, this module offers a user-friendly solution for streamlined JSON data handling across various application scenarios.
-
----
-
-# Encryption
-
-The Encryption Module within the Do Framework provides robust data encryption and decryption capabilities, featuring functions like getEncryptedData and getDecryptedData. Moreover, it enables token creation for enhanced security. Prioritizing simplicity and robust security, this module seamlessly integrates into applications, safeguarding data integrity without sacrificing usability.
+Custom Fields stores definitions of extra fields that an app lets users add to its records, such as a "Customer tier" on a contact. Definitions live in shared `xp_system_custom_fields` tables, grouped by app. Optional conditions and actions call a handler class in your app when a field's value changes, and the app stores the values itself. No framework app uses the module yet, and parts of it need workarounds in 0.0.42, which the page describes.
 
 ---
 
-# File Manager
+## Encryption
 
-The FileManager module in the DoFramework simplifies file operations within applications, providing intuitive functions for tasks like creation and deletion. With a focus on efficiency and ease of use, it offers developers a streamlined solution for effective file management.
+Encryption encrypts and decrypts strings with the system's `encryption_key`, creates hashes, and builds simple tokens for passing data between requests.
 
 ---
 
-# Util Classes
+## Exchanger API
 
-The Util Classes module in the DoFramework provides essential tools for common programming tasks. With classes like `CommonFunction`, `DateAndTimeManager`, `IpManager`, `Timezone`, `Validation`, `QrCode` and `ImageManager` (each reached through an accessor such as `Util::Validation()`), developers can easily handle tasks such as date and time manipulation, IP address management, and data validations. This module streamlines development workflows, promotes code reusability, and ensures robustness in applications.
+Exchanger API connects the framework to QuickBooks over OAuth 2. It stores the tokens in its own table, keeps them in the session, checks the connection, and wraps the QuickBooks calls for authorization, queries, batches and invoice PDFs. In 0.0.42 the module can't be loaded as shipped and the QuickBooks SDK isn't included; the page explains both.
+
+---
+
+## File Manager
+
+File Manager handles files and images: uploads with validation, image thumbnails, building public URLs and paths, copying and deleting files and folders, and storing files either on the server or in an S3 bucket.
+
+---
+
+## JSON Manager
+
+JSON Manager works with JSON strings and files: it reads nested values, checks whether a key exists, and changes the data with `set`, `push`, `pop`, `shift`, `unshift`, `merge` and `unset`.
+
+---
+
+## XML Manager
+
+XML Manager works with XML strings and files: it reads values with XPath, adds, updates and removes elements and attributes, and returns results as XML or as arrays.
+
+---
+
+## Util
+
+Util groups small helper classes, each reached through an accessor such as `Util::Validation()`: common functions, date and time handling, IP addresses, time zones, input validation, QR codes and image handling.
 
 ---

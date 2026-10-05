@@ -66,7 +66,7 @@ App Options are named settings that an app keeps in its own table, such as a dis
 
 ## Scheduler (Heartbeat)
 
-The Scheduler runs background tasks from a cron job that calls `api/heartbeat.php` every minute. An app schedules its own work by adding a `<app_name>Scheduler` class that extends `DoScheduler` and registers tasks with `self::job()->frequency()`. The page also covers the admin panel's Heartbeat page and the `heartbeat.php` commands.
+The Scheduler runs background tasks from a cron job that calls `api/heartbeat.php` every minute. An app schedules its own work by adding a `<app_name>Scheduler` class that extends `DoScheduler` and registers tasks with `self::job()->frequency()`. The page also covers the admin panel's Scheduler page and the `heartbeat.php` commands.
 
 ---
 

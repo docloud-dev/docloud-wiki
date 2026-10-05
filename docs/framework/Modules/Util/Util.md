@@ -1,3 +1,8 @@
+---
+title: Util
+sidebar_label: Util
+---
+
 # Util
 
 Owner: Nuwan Danushka
@@ -43,5 +48,47 @@ In this step:
 - **`CommonFunction()`** is a method inside the **`Util`** class, returning an instance of the **`CommonFunction`** class.
 - We store this instance in **`$common_functions_obj`**.
 - Then, we call the **`countryList()`** method on the **`$common_functions_obj`** instance to retrieve the list of countries.
+
+---
+
+## Common Functions
+
+`Util::CommonFunction()` holds general helpers: domain and URL parsing, header parsing, converting sizes to bytes, text encoding, sanitizing variables, validating sets of data, and a country list.
+
+---
+
+## Date And Time Manager
+
+`Util::DateAndTimeManager()` creates, converts and compares dates and times: date ranges and intervals, time zone conversion, differences between dates, and the system's current date and time.
+
+---
+
+## IP Manager
+
+`Util::IpManager()` returns the client's and the server's IP address.
+
+---
+
+## QR Code
+
+`Util::QrCode()` builds QR codes for a URL, text, email, phone number, SMS or contact card through Google's deprecated Image Charts service, which no longer responds (see the page).
+
+---
+
+## Time Zone
+
+`Util::Timezone()` lists the available time zones and looks up the client's time zone.
+
+---
+
+## Validation
+
+`Util::Validation()` checks input: email addresses, URLs, phone numbers, NIC numbers, US ZIP codes, passwords, JSON and image data.
+
+---
+
+## Image Manager
+
+`Util::ImageManager()` works with images that reach your controller as base64 text, such as a canvas drawing or a camera capture. It reads the image type and width and scales the image to a given width. For images uploaded from a form, use File Manager instead.
 
 ---

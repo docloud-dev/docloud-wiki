@@ -35,8 +35,8 @@ The DoCloud App SDK has the following minimum system requirements:
 - Web Server : Apache 2.4 + or OpenLitespeed 1.7.x + or LSWS 6.0 + (Not Officially tested on Other web servers )
 - PHP: 8.1 or Above
 - PHP Memory Limit: 128MB or Above
-- Security (SSL): TLS 1.0 or above (not tested)
-- .htacess Support
+- HTTPS: required (the API refuses plain HTTP requests)
+- .htaccess support with mod_rewrite
 
 ### **Documentation:**
 

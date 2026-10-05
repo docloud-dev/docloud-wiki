@@ -1,10 +1,25 @@
+---
+title: Validation
+sidebar_label: Validation
+---
+
 # Validation
 
 Owner: Nuwan Danushka
 
 # Introduction
 
-Introducing the Validation Class : Elevating Data Integrity in the Do Framework. This module offers a variety of validation methods, empowering developers to ensure robust data integrity within their applications.
+The `Validation` class holds checks for common input: email addresses, phone numbers, Sri Lankan NIC numbers, US ZIP codes, URLs, passwords, Base64 and JSON. Get an object through the Util accessor:
+
+```php
+$validation_object = Util::Validation();
+
+if (!$validation_object->emailValidation($email)) {
+    // reject the request
+}
+```
+
+To validate several fields of a request at once with PHP filters, see `validateData` in [Common Functions](Common%20Functions.md).
 
 ---
 
@@ -14,13 +29,15 @@ Introducing the Validation Class : Elevating Data Integrity in the Do Framework.
 
 Description:
 
-The **`phoneValidation`** method is utilized to validate a phone number if it adheres to one of the accepted formats.
+The **`phoneValidation`** method checks a phone number against three fixed formats.
 
 Accepted formats:
 
-- **`(+CountryCode)NNNNNNNNNN`** (14 characters)
-- **`+CountryCodeNNNNNNNNNN`** (12 characters)
-- **`0NNNNNNNNNN`** (10 characters)
+- **`(+94)771234567`**: 14 characters. `(+`, a 2-digit country code, `)`, then 9 digits.
+- **`+94771234567`**: 12 characters. `+` then 11 digits.
+- **`0771234567`**: 10 characters. `0` then 9 digits.
+
+Spaces, dashes and other lengths are rejected.
 
 Syntax:
 
@@ -31,13 +48,16 @@ $result = $validation_object->phoneValidation($phone);
 
 **Parameters:**
 
-- **`$phone`**: The string representation of the phone number to be validated.
+- **`$phone`**: The phone number to validate.
 
 **Return Value:**
 
-- **`Boolean`**:  Returns a true if the phone number is valid, false otherwise.
+- **`Boolean`**: `true` if the number matches one of the formats, `false` otherwise.
 
-This method validates the provided phone number against the accepted formats. It returns **`true`** if the phone number adheres to one of the specified formats, otherwise it returns **`false`**.
+<aside>
+⚠️ In the 12-character format only the first 10 characters after `+` are checked, so the last character can be anything: `+9477123456x` passes. Use `validateAllPhone2` if you need every character checked.
+
+</aside>
 
 ---
 
@@ -45,7 +65,7 @@ This method validates the provided phone number against the accepted formats. It
 
 Description:
 
-The **`nicValidation`** method is utilized to validate a Sri Lankan NIC (National Identity Card) number.
+The **`nicValidation`** method checks a Sri Lankan NIC number in the old 10-character format: 9 digits followed by one non-digit character.
 
 Syntax:
 
@@ -56,13 +76,13 @@ $result = $validation_object->nicValidation($nic);
 
 **Parameters:**
 
-- **`$nic`**: The string representation of the NIC to be validated.
+- **`$nic`**: The NIC number to validate, such as `123456789V`.
 
 **Return Value:**
 
-- **`Boolean`**:  Returns a true if the NIC is valid, false otherwise.
+- **`Boolean`**: `true` if the NIC has the old format, `false` otherwise.
 
-This method validates the provided NIC adheres to the standard format of Sri Lankan NICs. It returns true if the NIC is valid according to the validation, otherwise it returns false.
+The method does not accept the 12-digit NIC format, and it accepts any letter in the last position, not only `V` or `X`.
 
 ---
 
@@ -70,7 +90,7 @@ This method validates the provided NIC adheres to the standard format of Sri Lan
 
 Description:
 
-The **`emailValidation`** method is utilized to check if the given email address is valid using PHP's built-in email validation filter.
+The **`emailValidation`** method checks an email address with PHP's `FILTER_VALIDATE_EMAIL` filter.
 
 Syntax:
 
@@ -81,13 +101,11 @@ $result = $validation_object->emailValidation($email);
 
 **Parameters:**
 
-- **`$email`**: The string representation of the email to be validated.
+- **`$email`**: The email address to validate.
 
 **Return Value:**
 
-- **`Boolean`**:  Returns a true if the email is valid, false otherwise.
-
-This method validates the provided email address using PHP's built-in email validation filter. It returns **`true`** if the email is valid according to the filter, otherwise it returns **`false`**.
+- **`Boolean`**: `true` if the email is valid, `false` otherwise.
 
 ---
 
@@ -95,25 +113,27 @@ This method validates the provided email address using PHP's built-in email vali
 
 Description:
 
-The **`arrayKeyExists`** method is utilized to count the number of keys present in an array.
+The **`arrayKeyExists`** method counts how many of the given keys exist in an array.
 
 Syntax:
 
 ```php
 $validation_object = Util::Validation();
-$result = $validation_object->arrayKeyExists(array $keys, array $checkArray);
+$result = $validation_object->arrayKeyExists(['name', 'email'], $data);
+
+if ($result !== 2) {
+    // a required key is missing
+}
 ```
 
 **Parameters:**
 
-- **`$keys`**: An array of keys to check for existence.
-- **`$checkArray`**: The array to check for key existence.
+- **`$keys`**: A list of key names.
+- **`$checkArray`**: The array to look in.
 
 **Return Value:**
 
-- **`Int`**: The count of keys present in the **`$checkArray`**.
-
-This method counts the number of keys present in the **`$checkArray`** that match any of the keys in the **`$keys`** array.
+- **`Integer`**: How many of `$keys` are keys of `$checkArray`.
 
 ---
 
@@ -121,7 +141,14 @@ This method counts the number of keys present in the **`$checkArray`** that matc
 
 Description:
 
-The **`imageStringValidation`** method is utilized to validate if a string is an image encoded in base64 format.
+The **`imageStringValidation`** method decodes a Base64 string and returns the decoded data if it is plain ASCII text. Despite its name, it does not check for an image, and it rejects real binary images.
+
+It returns the decoded data only when both checks pass:
+
+1. Decoding the string and encoding it again gives exactly the original string. A `data:image/png;base64,` prefix, line breaks or missing padding make this fail.
+2. `mb_detect_encoding` reports the decoded data as `ASCII`.
+
+PNG, JPEG, GIF and WebP files contain bytes outside the ASCII range, so they fail the second check and the method returns `false`. A Base64-encoded SVG file or any other ASCII text passes.
 
 Syntax:
 
@@ -132,13 +159,14 @@ $result = $validation_object->imageStringValidation($imageString);
 
 **Parameters:**
 
-- **`$imageString`**:  The image string to validate.
+- **`$imageString`**: A Base64 string, without a `data:` prefix.
 
 **Return Value:**
 
-- **`String`**: Returns the decoded image string if valid, **`false`** otherwise.
+- **`String`**: The decoded data, when it is valid Base64 of ASCII-only content.
+- **`false`**: Otherwise, including for every PNG or JPEG image.
 
-This method validates whether the provided string is an image encoded in base64 format. If the string is a valid base64-encoded image, it returns the decoded image string. Otherwise, it returns **`false`**.
+To accept uploaded images, check the Base64 with `validateBase64String`, then check the decoded bytes with PHP's `getimagesizefromstring()` or `finfo`.
 
 ---
 
@@ -146,7 +174,7 @@ This method validates whether the provided string is an image encoded in base64 
 
 Description:
 
-The **`imageStringValidation`** method is utilized to validate a US ZIP code.
+The **`validateUSAZip`** method checks a US ZIP code: five digits, optionally followed by a dash and four more digits.
 
 Syntax:
 
@@ -157,13 +185,11 @@ $result = $validation_object->validateUSAZip($zip_code);
 
 **Parameters:**
 
-- **`$zip_code`**:  The zip code to validate.
+- **`$zip_code`**: The ZIP code to validate, such as `90210` or `90210-1234`.
 
 **Return Value:**
 
-- **`Boolean`**: Returns true if the ZIP code is valid, false otherwise.
-
-This method validates whether the provided string is a valid US ZIP code.
+- **`Boolean`**: `true` if the ZIP code is valid, `false` otherwise.
 
 ---
 
@@ -171,25 +197,25 @@ This method validates whether the provided string is a valid US ZIP code.
 
 Description:
 
-The **`valid_phone`** method is utilized to validate a phone number.
+The **`valid_phone`** method checks a phone number and returns it in a normalised form. It recognises US numbers in most common layouts. With `$international` set to `true`, it also accepts other numbers that have at least 8 digits.
 
 Syntax:
 
 ```php
 $validation_object = Util::Validation();
-$result = $validation_object->valid_phone($str, $international = false);
+$result = $validation_object->valid_phone('(212) 555-1234 ext 5');          // "212-555-1234 ext 5"
+$result = $validation_object->valid_phone('+94 77 123 4567', true);         // "+94 77 123 4567"
 ```
 
 **Parameters:**
 
-- **`$str`**: The phone number string to validate.
-- **`$international`**: (Optional) A boolean indicating whether the phone number is in international format. Default is **`false`**.
+- **`$str`**: The phone number to validate.
+- **`$international`**: Optional. `true` to accept non-US numbers. Default: `false`.
 
 **Return Value:**
 
-- **`Boolean`**: Returns **`true`** if the phone number is valid, **`false`** otherwise.
-
-This method validates whether the provided phone number is valid. If the phone number is in international format, set **`$international`** to **`true`**. It returns **`true`** if the phone number is valid, otherwise it returns **`false`**.
+- **`String`**: A US number as `NNN-NNN-NNNN`, followed by a space and `ext N` when there is an extension. An international number is returned trimmed.
+- **`false`**: The number is not valid. Without `$international`, every non-US number returns `false`.
 
 ---
 
@@ -197,24 +223,23 @@ This method validates whether the provided phone number is valid. If the phone n
 
 Description:
 
-The **`validateAllPhone2`** method is utilized to validate a phone number using various patterns and formats.
+The **`validateAllPhone2`** method removes `(`, `)`, `-`, `.` and spaces from a phone number, then checks that what's left is 10 to 15 digits, optionally starting with `+`.
 
 Syntax:
 
 ```php
 $validation_object = Util::Validation();
-$result = $validation_object->validateAllPhone2($phone);
+$result = $validation_object->validateAllPhone2('+94 (77) 123-4567');   // "+94771234567"
 ```
 
 **Parameters:**
 
-- **`$phone`**: The phone number string to validate.
+- **`$phone`**: The phone number to validate.
 
 **Return Value:**
 
-- **`Boolean`**: Returns **`true`** if the phone number is valid, **`false`** otherwise.
-
-This method checks if the provided phone number and alidates a phone number and returns it on success, false on failure.
+- **`String`**: The cleaned number, with its leading `+` if it had one.
+- **`false`**: The number is not valid.
 
 ---
 
@@ -222,7 +247,7 @@ This method checks if the provided phone number and alidates a phone number and 
 
 Description:
 
-The **`validateAllPhone`** method is utilized to validate a phone number using various patterns and formats.
+The **`validateAllPhone`** method checks a phone number against several regional patterns (international, North American, UK, French and Sri Lankan). If none matches, it accepts any number with 10 to 15 digits, optionally starting with `+`. The check is permissive.
 
 Syntax:
 
@@ -233,13 +258,11 @@ $result = $validation_object->validateAllPhone($phone);
 
 **Parameters:**
 
-- **`$phone`**: The phone number string to validate.
+- **`$phone`**: The phone number to validate. `(`, `)`, `-`, `.` and spaces are removed first.
 
 **Return Value:**
 
-- **`Boolean`**: Returns **`true`** if the phone number is valid, **`false`** otherwise.
-
-This method checks if the provided phone number matches any known patterns for international and specific country formats. If it does, it returns true. If not, it proceeds with manual validation to check if the phone number has the correct length and format. If everything passes, it returns true. Otherwise, it returns false.
+- **`Boolean`**: `true` if the number is valid, `false` otherwise.
 
 ---
 
@@ -247,24 +270,29 @@ This method checks if the provided phone number matches any known patterns for i
 
 Description:
 
-The **`validateLKRPhone`** method is utilized to validate a Sri Lankan phone number.
+The **`validateLKRPhone`** method checks a Sri Lankan **mobile** number. Landline numbers are rejected.
+
+It removes every non-digit character and any leading zeros. Then:
+
+- With exactly 9 digits left, the number must start with a mobile prefix (see `check_for_mobile`).
+- With more than 9 digits, the last 9 must start with a mobile prefix, and the digits before them must be `94`.
 
 Syntax:
 
 ```php
 $validation_object = Util::Validation();
-$result = $validation_object->validateLKRPhone($phone);
+$validation_object->validateLKRPhone('077 123 4567');   // true
+$validation_object->validateLKRPhone('+94771234567');   // true
+$validation_object->validateLKRPhone('0112345678');     // false: landline
 ```
 
 **Parameters:**
 
-- **`$phone`**: The phone number string to validate.
+- **`$phone`**: The phone number to validate.
 
 **Return Value:**
 
-- **`Boolean`**: Returns **`true`** if the phone number is valid, **`false`** otherwise.
-
-This function removes all non-numeric characters from the provided phone number, and then checks the length of the cleaned number. If the length is less than 9, it returns false. If the length is 9, it calls the **`Validation::check_for_mobile()`** method to validate the number. If the length is greater than 9, it extracts the last 9 digits and checks if they are a valid mobile number prefix. It also checks if the remaining digits before the prefix are '94', indicating an international Sri Lankan phone number.
+- **`Boolean`**: `true` if the number is a valid Sri Lankan mobile number, `false` otherwise.
 
 ---
 
@@ -272,24 +300,22 @@ This function removes all non-numeric characters from the provided phone number,
 
 Description:
 
-The **`check_for_mobile`** method is utilized to validate if a given number is a mobile phone number based on Sri Lankan mobile phone codes.
+The **`check_for_mobile`** method checks whether a number starts with a Sri Lankan mobile prefix: `70`, `71`, `72`, `75`, `76`, `77` or `78`. It only looks at the first two characters.
 
 Syntax:
 
 ```php
 $validation_object = Util::Validation();
-$result = $validation_object->check_for_mobile($num);
+$result = $validation_object->check_for_mobile('771234567');
 ```
 
 **Parameters:**
 
-- **`$phone`**: The phone number string to check.
+- **`$num`**: The number without the leading `0` or country code.
 
 **Return Value:**
 
-- **`Boolean`**: Returns **`true`** if the number is a mobile phone number, **`false`** otherwise.
-
-This function takes a numeric string as input and checks if the first two digits of the string match any of the Sri Lankan mobile phone codes ('70', '71', '72', '75', '76', '77', '78'). If a match is found, it returns **`true`**, indicating that the number is a mobile phone number; otherwise, it returns **`false`**.
+- **`Boolean`**: `true` if the number starts with a mobile prefix, `false` otherwise.
 
 ---
 
@@ -297,7 +323,7 @@ This function takes a numeric string as input and checks if the first two digits
 
 Description:
 
-The **`validateBase64String`** method is utilized to validate that a given string is a valid Base64 encoded string.
+The **`validateBase64String`** method checks that a string is valid, canonical Base64. It decodes the string in strict mode, encodes it again and compares the result with the input.
 
 Syntax:
 
@@ -308,13 +334,11 @@ $result = $validation_object->validateBase64String($data);
 
 **Parameters:**
 
-- **`$date`**: The string to validate.
+- **`$data`**: The string to validate. A `data:` prefix or line breaks make it fail.
 
 **Return Value:**
 
-- **`Boolean`**: Returns true if the string is a valid Base64 encoded string, false otherwise.
-
-This function checks if the given string is a valid Base64 encoded string by attempting to decode it and then re-encode it. If the re-encoded string matches the original string, it is considered a valid Base64 encoded string.
+- **`Boolean`**: `true` if the string is valid Base64, `false` otherwise.
 
 ---
 
@@ -322,7 +346,7 @@ This function checks if the given string is a valid Base64 encoded string by att
 
 Description:
 
-The **`check_for_mobile`** method is utilized to validate if a given string is a valid URL.
+The **`checkURL`** method checks whether a string is a valid URL, using PHP's `FILTER_VALIDATE_URL` filter.
 
 Syntax:
 
@@ -333,13 +357,11 @@ $result = $validation_object->checkURL($string);
 
 **Parameters:**
 
-- **`$string`**: The string to check if it is a valid URL.
+- **`$string`**: The string to check. It needs a scheme, such as `https://`.
 
 **Return Value:**
 
-- **`Boolean`**: Returns **`true`** if the string is a valid URL, **`false`** otherwise.
-
-This function uses the PHP built-in function **`filter_var()`** with **`FILTER_VALIDATE_URL`** to determine if the provided string is a valid URL. If the string passes the URL validation, the function returns **`true`**, indicating that it is a valid URL. Otherwise, it returns **`false`**.
+- **`Boolean`**: `true` if the string is a valid URL, `false` otherwise.
 
 ---
 
@@ -347,10 +369,9 @@ This function uses the PHP built-in function **`filter_var()`** with **`FILTER_V
 
 Description:
 
-The **`validatePassword`** method is utilized to validate a password to ensure it meets certain criteria.
+The **`validatePassword`** method checks that a password meets these rules:
 
-- Criteria:
-1. Length is at least 6 characters.
+1. At least 6 characters long.
 2. Contains at least one uppercase letter.
 3. Contains at least one lowercase letter.
 4. Contains at least one digit (0-9).
@@ -364,13 +385,11 @@ $result = $validation_object->validatePassword($password);
 
 **Parameters:**
 
-- **`$password`**:  The password string to check.
+- **`$password`**: The password to check.
 
 **Return Value:**
 
-- **`Boolean`**: Returns **`true`** if the password meets all criteria, **`false`** otherwise.
-
-This function checks if the provided password meets the criteria, and the function returns true, indicating that it is a valid password. Otherwise, it returns false.
+- **`Boolean`**: `true` if the password meets all rules, `false` otherwise.
 
 ---
 
@@ -378,7 +397,7 @@ This function checks if the provided password meets the criteria, and the functi
 
 Description:
 
-The **`isJson`** method is utilized to validate if a string is a valid JSON.
+The **`isJson`** method checks whether a string is valid JSON by decoding it with `json_decode()`.
 
 Syntax:
 
@@ -389,12 +408,10 @@ $result = $validation_object->isJson($string);
 
 **Parameters:**
 
-- **`$string`**:  The string to validate if it is a valid JSON.
+- **`$string`**: The string to check.
 
 **Return Value:**
 
-- **`Boolean`**: Returns true if the string is a valid JSON, false otherwise.
-
-This method checks if the provided string is a valid JSON by attempting to decode it using json_decode(). If the decoding process succeeds without errors, it indicates that the string is valid JSON, and the method returns true. Otherwise, it returns false.
+- **`Boolean`**: `true` if the string decodes without errors, `false` otherwise. Scalar JSON such as `123` or `"text"` also counts as valid. An empty string is not valid.
 
 ---
