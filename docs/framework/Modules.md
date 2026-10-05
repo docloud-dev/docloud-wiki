@@ -40,6 +40,6 @@ The FileManager module in the DoFramework simplifies file operations within appl
 
 # Util Classes
 
-The Util Classes module in the DoFramework provides essential tools for common programming tasks. With classes like CommonFunctions, DateTime, IPManager, TimeZone, and Validations, developers can easily handle tasks such as date and time manipulation, IP address management, and data validations. This module streamlines development workflows, promotes code reusability, and ensures robustness in applications.
+The Util Classes module in the DoFramework provides essential tools for common programming tasks. With classes like `CommonFunction`, `DateAndTimeManager`, `IpManager`, `Timezone`, `Validation`, `QrCode` and `ImageManager` (each reached through an accessor such as `Util::Validation()`), developers can easily handle tasks such as date and time manipulation, IP address management, and data validations. This module streamlines development workflows, promotes code reusability, and ensures robustness in applications.
 
 ---

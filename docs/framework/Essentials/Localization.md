@@ -17,7 +17,7 @@ To add languages to your app, follow these steps:
 
 ```json
 {
-  "en": {
+  "EN": {
     "add_news": "Add News",
     "author":"Author",
     "back_to_news_list":"Back to News List",
@@ -37,9 +37,9 @@ To add languages to your app, follow these steps:
     "update":"Update",
     "visibility":"Visibility"
   },
-  "de": {
+  "DE": {
     "add_news": "Neuigkeiten hinzufügen",
-    "Autor": "Autor",
+    "author": "Autor",
     "back_to_news_list": "Zurück zur Nachrichtenliste",
     "cancel_delete": "Abbrechen",
     "confirm_delete": "Löschen bestätigen",
@@ -62,7 +62,7 @@ To add languages to your app, follow these steps:
 
 In this JSON file:
 
-- The top-level keys (**`en`**, **`de`**) represent language codes (e.g., English, German).
+- The top-level keys (**`EN`**, **`DE`**) represent language codes (e.g., English, German). They must match the language code exactly, including case. On page load the framework uses the `language` cookie, or **`EN`** when no cookie is set, so a lowercase `en` key is never loaded by default.
 - Under each language code, there are key-value pairs where the key is the recognition and the value is the corresponding translation in the respective language.
 
 By following these steps, your app can easily incorporate language support by utilizing the translations provided in the **`lang.json`** file.

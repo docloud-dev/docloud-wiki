@@ -6,7 +6,13 @@ Owner: Thilina Deepal
 
 ## **Supported PHP Versions.**
 
-- PHP : 7.2 or Above
+- PHP : 8.1 or Above
+- PHP memory limit : 128MB or above
+
+<aside>
+💡 The installer's self-check screen still accepts PHP 7.2, but the framework itself needs PHP 8.1 or above. Check your PHP version yourself before installing.
+
+</aside>
 
 ### **Required PHP Extensions:**
 
@@ -29,6 +35,7 @@ Owner: Thilina Deepal
 - exif
 - fileinfo
 - gettext
+- zip (needed to upload, install, export, back up, restore and update apps and the framework)
 
 **Graphics and Multimedia Extensions:**
 

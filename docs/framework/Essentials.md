@@ -47,10 +47,10 @@ To move the **DoFramework** from one server to another or create a backup, follo
 ### 1. **Copy the Framework Files**
 
 - **What to do**: Make a copy of the entire working framework, including these important folders:
-  - **API**
-  - **App**
-  - **Assets**
-  - **Storage**
+  - **api**
+  - **apps**
+  - **assets**
+  - **storage**
   - All other essential files are in the public directory.
 - **How**: You can zip the entire framework directory.
 
@@ -63,22 +63,22 @@ To move the **DoFramework** from one server to another or create a backup, follo
 
 ### 3. **Update Configuration Files**
 
-- **File to update**: `configs.development.xml`.
+- **File to update**: `api/config.<environment>.xml`, where `<environment>` is the value of `<system_environment>` in `api/config.xml` (for example `api/config.development.xml`).
 - **What to change**:
-  - **Database settings**: Update the database connection details under the `<databases>` section, like database name, user, and password.
-  - **System settings**: Update the `system_sitepath` (the path where the system is installed on the new server).
-  - **System email**: Update the email address used for system notifications in the `system` section.
+  - **Database settings**: Update the database connection details under the `<database>` section: `host`, `dbname`, `username` and `password`.
+  - **System settings**: Update `system_site_path` in the `<system>` section (the path where the system is installed on the new server).
+  - **System email**: Update `system_email` in the `<system>` section, the address used for system notifications.
 
 ### 4. **Change Email Settings (If Necessary)**
 
 - **What to do**: If you need to change how the system sends emails, update the **SMTP settings**.
-- **Where**: In the `<smtp>` section of the `<email>` in `configs.development.xml` file.
-  - You might need to change the SMTP server, port, username, or password, depending on your email provider.
+- **Where**: In the `<smtp>` section of `<email>` in the same `api/config.<environment>.xml` file.
+  - You might need to change `smtp_host`, `smtp_port`, `smtp_user_name` or `smtp_password`, depending on your email provider.
 
 ### 5. **Change System Token (If Necessary)**
 
 - **What to do**: If you need to change how the DoCloud identifies the application, update the **System Token**.
-- **Where**: In the `<system_token>` section of the `<do_cloud>` in `config.xml` file.
+- **Where**: In the `<system_token>` section of the `<do_cloud>` in the `api/config.xml` file.
   - Update the system token tag `<system_token> token here </system_token>`
 
 ### Final Steps:

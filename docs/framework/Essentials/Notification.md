@@ -8,7 +8,7 @@ Owner: Nuwan Danushka
 
 The "Notification App" is a default system within the Do Framework designed to efficiently manage notifications. This app enables users to send customized notifications to individuals or groups through various applications. The flexibility of customization allows for tailoring notifications according to specific needs, whether it's delivering important updates, alerts, or personalized messages. The "Notification App" provides a seamless solution for keeping users informed, with a user-friendly interface and adaptability that makes it a valuable tool for enhancing communication within the Do Framework environment.
 
-User notification preferences are stored in the database. By default, notifications are defined in the app's XML configuration with the `default` property set to `true`, applying to all users initially.
+User notification preferences are stored in the database. By default, notifications are defined in the app's XML configuration with the `default_enabled` property set to `true`, applying to all users initially.
 
 Notification preferences can be customized in several ways:
 
@@ -44,7 +44,7 @@ This is how you can send a push notification to a user through an app. Let's bre
 3. **Push Notification for User:**
     
     ```php
-    $notificationApp->pushNotificationForUser($user_id, $app_name, $type, $title, $notification_icon, $notification_message, $status, $action);
+    $result = $notificationApp->pushNotificationForUser($user_id, $app_name, $type, $notification_name, $title, $notification_icon, $notification_message, $status, $action);
     ```
     
     Finally, a push notification is sent to a specific user. The parameters are as follows:
@@ -52,12 +52,20 @@ This is how you can send a push notification to a user through an app. Let's bre
     - **`$user_id`**: User ID of the recipient.
     - **`$app_name`**: Name of the app sending the notification.
     - **`$type`**: Notification type (any integer number as needed).
+    - **`$notification_name`**: The `name` of a `<notification>` declared in the app's `<user_notifications>` XML block. Each user's preferences for that notification decide whether it is delivered.
     - **`$title`**: Title of the notification.
     - **`$notification_icon`**: Icon for the notification.
     - **`$notification_message`**: Message to be included in the notification.
     - **`$status`**: 1 for unread, 0 for read.
     - **`$action`**: The previously defined action in JSON format.
     
+
+The call returns an array such as `['success' => true, 'message' => 'Notification sent successful']`. On failure, `message` names the problem, for example the empty required fields.
+
+<aside>
+💡 `$user_id`, `$app_name`, `$notification_name`, `$type`, `$title` and the message are required. If no preference matches `$notification_name` for the user, nothing is stored, but the call still reports success. Check that the name matches the XML.
+
+</aside>
 
 In summary, this code is a simplified representation of how to send a push notification to a user through the **`xp_notification`** app, including details such as user ID, app name, notification type, notification status, title, icon, message, and an associated action to be performed when the user interacts with the notification (in this case, navigating to the '/user' path).
 
@@ -74,7 +82,7 @@ The **`pushNotificationForUser`** function is designed to send notifications to 
 Syntax:
 
 ```php
-pushNotificationForUser($user_id, $app_name, $type, $title, $icon, $description, $status, $action)
+pushNotificationForUser($user_id, $app_name, $type, $notification_name, $title, $icon, $description, $status, $action)
 ```
 
 **Parameters**:
@@ -82,6 +90,7 @@ pushNotificationForUser($user_id, $app_name, $type, $title, $icon, $description,
 - **`$user_id`**: The identifier of the target user.
 - **`$app_name`**: The name of the application triggering the notification.
 - **`$type`**: The type of notification.
+- **`$notification_name`**: The `name` of a `<notification>` declared in the app's `<user_notifications>` XML block.
 - **`$title`**: The title of the notification.
 - **`$icon`**: The icon associated with the notification.
 - **`$description`**: The detailed description accompanying the notification.
@@ -90,8 +99,8 @@ pushNotificationForUser($user_id, $app_name, $type, $title, $icon, $description,
 
 **Returns:**
 
-- **`true`** if the operation is successful.
-- **`false`** if the operation is not successful.
+- An array with **`success`** (boolean) and **`message`** (string).
+- **`false`** if an exception is thrown.
 
 This function streamlines the process of notifying specific users, offering a straightforward and organized approach to managing notifications within an application.
 
@@ -104,7 +113,7 @@ The **`pushNotificationForUsersRoles`** function is created to send notification
 Syntax:
 
 ```php
-NotificationForUsersRoles($role_id, $app_name, $type, $title, $icon, $description, $status, $action)
+pushNotificationForUsersRoles($role_id, $app_name, $type, $notification_name, $title, $icon, $description, $status, $action)
 ```
 
 **Parameters**:
@@ -112,6 +121,7 @@ NotificationForUsersRoles($role_id, $app_name, $type, $title, $icon, $descriptio
 - **`$role_id`**: The identifier of the target role.
 - **`$app_name`**: The name of the application triggering the notification.
 - **`$type`**: The type of notification.
+- **`$notification_name`**: The `name` of a `<notification>` declared in the app's `<user_notifications>` XML block.
 - **`$title`**: The title of the notification.
 - **`$icon`**: The icon associated with the notification.
 - **`$description`**: The detailed description accompanying the notification.
@@ -120,7 +130,8 @@ NotificationForUsersRoles($role_id, $app_name, $type, $title, $icon, $descriptio
 
 **Returns:**
 
-- **`true`** if the operation is successful.
+- An array with **`success`** (boolean) and **`message`** (string) when the role has users.
+- **`true`** when the role has no users to notify.
 - **`false`** if the operation is not successful.
 
 This function facilitates the process of notifying users based on their assigned roles, providing a clear and organized way to manage notifications within an application.
@@ -240,30 +251,26 @@ This function streamlines the process of notifying specific users, offering a st
 
 ---
 
-### markAsReadNotification
+### markNotification
 
 ### Description:
 
-The **`markAsReadNotification`** function is designed to mark as read.
+The **`markNotification`** function toggles a notification's status: an unread notification becomes read, and a read one becomes unread.
 
 Syntax:
 
 ```php
-markAsReadNotification(NotificationModel $notification)
+Notification::markNotification(NotificationModel $notification)
 ```
 
 **Parameters**:
 
 - **`$notification`**: An instance of the **`NotificationModel`** class containing the necessary information for the notification.
-    - **`user_id`**
-    
-    (All properties are required)
-    
+    - **`id`** (required)
 
 **Returns:**
 
-- **`true`** if the operation is successful.
-- **`false`** if the operation is not successful.
+- An array with **`success`** (boolean) and **`message`** (string).
 
 This function streamlines the process of marking notifications as read, providing a convenient method for managing notification status within your application.
 
@@ -412,7 +419,7 @@ The **`getNotificationsByUser`** function is designed to retrieve notifications 
 Syntax:
 
 ```php
-pushNotificationForUsergetNotificationsByUser(NotificationModel $notification, $page = null, $records_per_page = null)
+getNotificationsByUser(NotificationModel $notification, $page = null, $records_per_page = null)
 ```
 
 **Parameters**:

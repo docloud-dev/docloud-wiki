@@ -30,8 +30,8 @@ To send an email using the Email App, follow these steps:
     $email_property = new EmailProperty();
     $email_property->setRecipient($recipient);
     $email_property->setSubject($email_subject);
-    $email_property->setSenderEmail($sender_email);
-    $email_property->setSenderName($sender_name);
+    $email_property->setSender_email($sender_email);
+    $email_property->setSender_name($sender_name);
     $email_property->setHtml($email_body_html);
     ```
     
@@ -46,7 +46,7 @@ To send an email using the Email App, follow these steps:
     
     Finally, the email is sent using the Email App with the specified email properties.
     
-    In summary, this code demonstrates how to send an email through the Email App by defining email properties and using the **`sendEmail`** method of the**`xp-mail`** class.
+    In summary, this code demonstrates how to send an email through the Email App by defining email properties and using the **`sendMail`** method of the **`xp_email`** app.
     
 
 ---
@@ -83,8 +83,8 @@ To send an email using a predefined template through the Email App, follow these
     $email_property = new EmailProperty();
     $email_property->setRecipient($recipient);
     $email_property->setSubject($email_subject);
-    $email_property->setSenderEmail($sender_email);
-    $email_property->setSenderName($sender_name);
+    $email_property->setSender_email($sender_email);
+    $email_property->setSender_name($sender_name);
     $email_property->setHtml($html); // Use the HTML content generated from the email template
     ```
     

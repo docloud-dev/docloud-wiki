@@ -89,7 +89,7 @@ Callouts use Notion's `<aside>` block, with the emoji on the first line and a bl
 
 ### Code samples
 
-- Backend code is **PHP** (` ```php `, the vast majority of samples). Frontend code is **Vue 3 components written as JS modules** (` ```jsx `), which import from the framework's `xp_system` directory (e.g. `../../xp_system/components/dc_ui_kit_components/DcButton.js`).
+- Backend code is **PHP** (` ```php `, the vast majority of samples). Frontend code is **Vue 3 components written as JS modules** (` ```jsx `), which import UI kit components from the registry in the framework's `xp_system` directory (e.g. `import { DcButton } from "../../xp_system/components/dc_ui_kit_componenets/dc_ui_kit_registry.js"`). The folder really is spelled `dc_ui_kit_componenets`, and the kit's rules forbid importing a component's own file.
 - Docusaurus parses Markdown as MDX. Keep anything that contains `{`, `}` or `<Tag>` (Vue templates, `{{ mustache }}`, JSX, HTML) **inside code fences or inline code**. In prose, those characters can break the site build.
 - Notion export artifacts you'll find: URLs wrapped as `"<https://example.com>"` inside code, a stray blank line before a closing fence, and a leftover `chat.openai.com` link in `Todo App.md`. Clean them up in any section you edit, and don't copy them into new content.
 
@@ -108,7 +108,7 @@ tags: [update]
 
 ## Terminology
 
-The product name is spelled several ways across pages: "DoFramework", "Do Framework", "DoCloud", "Docloud". Match the spelling already used on the page you're editing. Platform requirements (PHP 7.2+, Apache 2.4+/OpenLiteSpeed/LSWS, `.htaccess` support) are in `docs/Home.md` and `docs/framework/Get Started.md`. Keep the two consistent if either changes.
+The product name is spelled several ways across pages: "DoFramework", "Do Framework", "DoCloud", "Docloud". Match the spelling already used on the page you're editing. Platform requirements (PHP 8.1+, 128 MB memory limit, Apache 2.4+/OpenLiteSpeed/LSWS, `.htaccess` support) are in `docs/Home.md` and `docs/framework/Get Started.md`. Keep the two consistent if either changes.
 
 ## Known gaps
 

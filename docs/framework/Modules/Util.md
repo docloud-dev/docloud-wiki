@@ -4,7 +4,7 @@ Owner: Nuwan Danushka
 
 # Introduction
 
-The Util module in the DoFramework delivers a versatile toolkit comprising essential utility classes tailored to streamline common programming challenges. From handling date and time functionalities to managing IP addresses and performing data validations, this module offers a comprehensive array of tools to simplify development tasks. With classes such as CommonFunctions, DateTime, IPManager, TimeZone, and Validations, developers gain access to reusable components that enhance code efficiency and maintainability. By incorporating the Util Classes module into their projects, developers can accelerate development workflows, promote code reusability, and ensure robustness across various application scenarios.
+The Util module in the DoFramework delivers a versatile toolkit comprising essential utility classes tailored to streamline common programming challenges. From handling date and time functionalities to managing IP addresses and performing data validations, this module offers a comprehensive array of tools to simplify development tasks. With classes such as `CommonFunction`, `DateAndTimeManager`, `IpManager`, `Timezone`, `Validation`, `QrCode` and `ImageManager` (each reached through an accessor such as `Util::Validation()`), developers gain access to reusable components that enhance code efficiency and maintainability. By incorporating the Util Classes module into their projects, developers can accelerate development workflows, promote code reusability, and ensure robustness across various application scenarios.
 
 ---
 

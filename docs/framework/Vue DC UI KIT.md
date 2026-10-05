@@ -48,14 +48,17 @@ Make sure to adjust the paths according to your project structure and the actual
 
 ## **Step 1: Import Needed Components**
 
-This step involves bringing in specific parts (components) from the DC UI KIT library.
+This step involves bringing in specific parts (components) from the DC UI KIT library. Import them from the kit's registry file, `dc_ui_kit_registry.js`, never from a component's own file.
 
 ```jsx
-// Import necessary components from the dc_ui_kit_components directory
-import  DcCard  from "../../xp_system/components/dc_ui_kit_components/DcCard.js";
-import  DcButton  from "../../xp_system/components/dc_ui_kit_components/DcButton.js";
-//etc
+// From a component in apps/<your_app>/components/
+import { DcCard, DcButton } from "../../xp_system/components/dc_ui_kit_componenets/dc_ui_kit_registry.js";
 ```
+
+<aside>
+💡 The folder name is spelled `dc_ui_kit_componenets` in the framework. Copy it exactly, or the import fails with a 404.
+
+</aside>
 
 ## **Step 2: Register Components in Your Component**
 
@@ -267,7 +270,7 @@ The **`DcCheckbox`** component is used for creating customizable checkbox inputs
 | --- | --- |
 | `value` | Value of the checkbox
 This property specifies the value associated with the checkbox. When the checkbox is checked, the checkbox_value in the v-model will be set to the specified value. |
-| `nod_label` | Set it true to hide the label |
+| `no_label` | Set it true to hide the label |
 
 By using the **`DcCheckbox`** component with the specified properties, you can create a checkbox input with custom text and associate it with a specific value in your application logic.
 
@@ -346,11 +349,12 @@ Here's an example of how to use the `DcTextField` component along with its prope
 
 | Property | Description |
 | --- | --- |
-| `containerClasses` | this property specifies the type of the button, and in the given example, it is set to "submit." This is commonly used for form submission buttons. |
+| `containerClasses` | CSS classes added to the field's container element. |
 | `label` | label |
 | `placeholder` | placeholder |
-| `readlonly` | set readonly to true |
+| `readonly` | set readonly to true |
 | `resize` | enable/disable the resize |
+| `autoResize` | grow the text area to fit its content (default `false`) |
 
 By using the **`DcTextField`** component with the specified properties, you can create a text area with customizable container classes based on your styling needs.
 
@@ -575,7 +579,7 @@ By using the `DcTabs` component with the specified properties, you can create a 
 
 ---
 
-## DcDropDown
+## DcDropdown
 
 The `DcDropdown` component is designed to create a customizable dropdown menu with various options for alignment, selection, and appearance.
 
@@ -676,7 +680,7 @@ In this simpler example, the `DcDropdown` is used with just a label slot, making
 
 These examples demonstrate the flexibility of the `DcDropdown` component, allowing for both simple and advanced implementations depending on the needs of your application.
 
-### **Properties of**  `DcDropDown`
+### **Properties of** `DcDropdown`
 
 | Property | Description |
 | --- | --- |
@@ -693,7 +697,7 @@ These examples demonstrate the flexibility of the `DcDropdown` component, allowi
 | `disabled` | A boolean that, when set to true, disables the dropdown, preventing user interaction. Defaults to false. |
 | `use_options`  | Make this true if you using only options. |
 
-### **Emits of** `DcDropDown`
+### **Emits of** `DcDropdown`
 
 | Method | Description |
 | --- | --- |
