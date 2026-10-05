@@ -12,7 +12,11 @@ The site itself is a **Docusaurus** project in a separate repo, `docloud-dev/doc
 2. That workflow only sends a `repository_dispatch` (`event_type: wiki_updated`) to `docloud-docs-public`, using the `PAT_TOKEN` secret.
 3. The site repo pulls this content, builds and deploys it. Changes go live in about 60–90 seconds.
 
-Day-to-day work happens on `dev`. Merging or pushing to `main` **publishes to the live site**, so do it only when the user asks. You can't preview locally from this repo. A Docusaurus build failure (for example an MDX parse error) shows up in the `docloud-docs-public` repo's Actions, not here.
+Day-to-day work happens on `dev`. Merging or pushing to `main` **publishes to the live site**, so do it only when the user asks. A Docusaurus build failure (for example an MDX parse error) shows up in the `docloud-docs-public` repo's Actions, not here, so check locally first.
+
+## Previewing
+
+`./preview.sh` copies `docs/` and `blog/` into a local clone of the site repo (`../docloud-docs-public`, cloned and installed on first run; override with `SITE_DIR`) the same way the deploy does, then starts the dev server at `http://localhost:3000` and keeps copying edits every second. `./preview.sh build` runs the production build instead. Run it before merging to `main`, because it catches the MDX errors that would otherwise break the deploy. The copied content shows up as changes in the site repo's `git status`; never commit it there.
 
 The repo root is also an **Obsidian vault** (`.obsidian/`). Contributors edit in Obsidian or VS Code. The shared vault config (`app.json`, `appearance.json`, `core-plugins.json`) is tracked. Per-user state such as `workspace.json` is gitignored.
 
