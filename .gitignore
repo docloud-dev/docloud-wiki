@@ -1,0 +1,27 @@
+# OS
+.DS_Store
+._*
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Obsidian: per-user state (shared vault config like app.json and core-plugins.json stays tracked)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/workspaces.json
+.obsidian/cache
+.obsidian/plugins/*/data.json
+.trash/
+
+# Claude Code: personal settings (shared settings.json stays tracked)
+.claude/settings.local.json
+
+# Docusaurus build output, in case the site is ever built inside this repo
+node_modules/
+build/
+.docusaurus/
