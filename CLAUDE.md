@@ -110,7 +110,7 @@ tags: [update]
 ## Accuracy and audience
 
 - **Source of truth:** the framework repo (`docloud-dev/docloud-framework`) at the release tag the docs cover. Check every claim against its code. Use its README and CHANGELOG only as leads, because parts of the README are out of date.
-- **Audience:** external developers. Leave out internal apps (inventory, La Vivente / PMS), the internal test harness (`./app-test`, `dev/app_testing/`), agent tooling and internal servers.
+- **Audience:** internal developers for now. Support for external developers is planned but hasn't started. Internal tooling such as the test harness (`./app-test`, `dev/app_testing/`) may be documented. Leave out specific business apps (inventory, La Vivente / PMS).
 - **Framework bugs:** when a reader would hit one, say what actually happens in a short `<aside>`.
 - **Security weaknesses:** never describe one on the site. Report it to the framework team instead.
 - **Links:** relative links encode spaces as `%20`. Link only to anchors on `##` or deeper headings: Docusaurus gives no anchor to H1 sections after the title, and the anchor checker rejects anchors into pages with parentheses in their names. In blog posts the truncate marker is `{/* truncate */}`, because MDX rejects `<!-- -->`.

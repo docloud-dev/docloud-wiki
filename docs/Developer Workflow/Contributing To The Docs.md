@@ -179,7 +179,7 @@ Docusaurus reads every `.md` file as MDX, which is stricter than Markdown.
 # What to check before you publish
 
 - **Every claim matches the framework.** Check behaviour against the framework's code at the release you're documenting, not against its README or an older page. If the code does something surprising that a reader would run into, say what actually happens in a short callout.
-- **The page is for external developers.** Leave out internal apps, internal servers and internal tooling.
+- **The page is for internal developers.** Internal tooling, such as the test harness, is fine to document. Leave out specific business apps such as inventory.
 - **No security weaknesses.** If you find one while writing, report it to the framework team. Don't describe it on the site.
 - **Product names match the page.** Pages use "DoFramework", "Do Framework", "DoCloud" and "Docloud". Keep the spelling the page already uses.
 - **`./preview.sh build` passes.**
