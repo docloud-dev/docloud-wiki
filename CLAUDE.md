@@ -107,6 +107,14 @@ tags: [update]
 ---
 ```
 
+## Accuracy and audience
+
+- **Source of truth:** the framework repo (`docloud-dev/docloud-framework`) at the release tag the docs cover. Check every claim against its code. Use its README and CHANGELOG only as leads, because parts of the README are out of date.
+- **Audience:** external developers. Leave out internal apps (inventory, La Vivente / PMS), the internal test harness (`./app-test`, `dev/app_testing/`), agent tooling and internal servers.
+- **Framework bugs:** when a reader would hit one, say what actually happens in a short `<aside>`.
+- **Security weaknesses:** never describe one on the site. Report it to the framework team instead.
+- **Links:** relative links encode spaces as `%20`. Link only to anchors on `##` or deeper headings: Docusaurus gives no anchor to H1 sections after the title, and the anchor checker rejects anchors into pages with parentheses in their names. In blog posts the truncate marker is `{/* truncate */}`, because MDX rejects `<!-- -->`.
+
 ## Terminology
 
 The product name is spelled several ways across pages: "DoFramework", "Do Framework", "DoCloud", "Docloud". Match the spelling already used on the page you're editing. Platform requirements (PHP 8.1+, 128 MB memory limit, Apache 2.4+/OpenLiteSpeed/LSWS, `.htaccess` support) are in `docs/Home.md` and `docs/framework/Get Started.md`. Keep the two consistent if either changes.
@@ -115,5 +123,4 @@ The wiki has no version number of its own. The first line of `docs/Home.md` name
 
 ## Known gaps
 
-- A docs update for framework 0.0.42 is in progress. Read `DOCS-UPDATE-PROGRESS.md` first for status and what's left.
 - Database migrations are not documented yet. They are unreleased in the framework (0.0.42 has no `Migrator`).
