@@ -142,7 +142,7 @@ Follow these rules:
 
 - **Fetch your own data.** The dashboard passes nothing but `widget`. Call your app's API in `created()`.
 - **Render inside `DcDashboardWidget`.** It gives the widget its card, title and loading overlay.
-- **Pass the `transparent` convention through.** Bind `:transparent="widget.options.transparent === true"`, so an install or another app can drop the card with `"options": {"transparent": true}` without changing your code. The built-in widgets all do this.
+- **Pass the `transparent` convention through.** Bind `:transparent="widget.options.transparent === true"`, so an install or another app can drop the card with `"options": {"transparent": true}` without changing your code. The built-in apps and quick-links widgets do this.
 - **Handle your own errors.** Catch request failures and show an empty state, so the widget stays on the page.
 - **Import kit components from the registry,** `dc_ui_kit_registry.js`. Don't import a component's own file, and keep import paths bare, with no `?v=`.
 

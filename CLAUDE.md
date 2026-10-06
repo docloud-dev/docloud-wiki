@@ -114,5 +114,5 @@ The product name is spelled several ways across pages: "DoFramework", "Do Framew
 ## Known gaps
 
 - A docs update for framework 0.0.42 is in progress. Read `DOCS-UPDATE-PROGRESS.md` first for status and what's left.
-- `Vue DC UI KIT.md` documents only 22 of the kit's 68 exported components and has no front matter yet. `Home.md` still carries the 2024 Notion introduction. Every other page was checked against framework 0.0.42.
+- `Home.md` still carries the 2024 Notion introduction. Every other page was checked against framework 0.0.42.
 - Database migrations are not documented yet. They are unreleased in the framework (0.0.42 has no `Migrator`).

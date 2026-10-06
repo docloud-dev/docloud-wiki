@@ -7,7 +7,7 @@ tags: [update, docs]
 
 We've rewritten this site against DoFramework 0.0.42. Every page was checked against the framework's code, so the examples match what the framework does today. There is also a new section on building apps from scratch.
 
-<!-- truncate -->
+{/* truncate */}
 
 ## What's new in the docs
 
