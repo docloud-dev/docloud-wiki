@@ -194,7 +194,7 @@ Release from `master`, with everything for the release merged.
    `bump-version` doesn't commit or tag. The live copies it also changed stay out of git.
 
 4. **Publish the release to DoCloud,** with this version's changelog section as its description, so installs can update.
-5. **Update the docs.** Check the pages the release affects on this site, and write a blog post for a notable release (see [Contributing To The Docs](./Contributing%20To%20The%20Docs.md)).
+5. **Update the docs.** Check the pages the release affects on this site, and write a blog post for a notable release (see [Contributing To The Docs](./Contributing%20To%20The%20Docs.md)). Once the pages match the new version, change the "These docs cover DoFramework x.y.z" line at the top of the [Home](../Home.md) page, and point its link to the newest docs update post.
 
 After the release, everyone merges `master` into their `dev-<name>` branch.
 

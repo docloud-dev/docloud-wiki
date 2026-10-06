@@ -1,61 +1,59 @@
 ---
 slug: /
+title: DoFramework Docs
 sidebar_label: Home
 sidebar_position: 1
 ---
 
-# DoFramework - Wiki v5
+# DoFramework Docs
+
+These docs cover **DoFramework 0.0.42**. See [what changed in this update](/blog/docs-for-framework-0-0-42).
 
 # Introduction
 
-Welcome to the official developer documentation for the Do Framework, a powerful platform for building custom applications. This comprehensive guide is designed to empower developers like you to harness the full potential of the Do Framework, enabling you to create scalable, feature-rich, and innovative solutions for a diverse range of business needs.
+DoFramework is a PHP and Vue 3 framework for building business web apps. It's the framework behind DoCloud: you download it from [DoCloud](./framework/Docloud.md), install it on your own server, and publish your apps to the DoCloud App Library so other systems can install them.
 
-## **What is DoFramework?**
+You build features as **apps**. An app is a self-contained unit with its own routes, API endpoints, database tables, permissions and menu entries. The framework provides everything around it:
 
-DoFramework is a robust and flexible framework that serves as the backbone for the DoCloud platform. It provides developers with a suite of tools, libraries, and APIs, empowering them to build applications that seamlessly integrate with DoCloud's ecosystem. Whether you're developing productivity apps, collaboration tools, or data management solutions, DoFramework equips you with the resources to deliver high-quality web apps.
+- **Routing and the API.** Each request reaches your app's controller, and every endpoint answers in the same JSON format.
+- **Users, sessions, roles and permissions.** Every API action is checked against the permissions your app declares.
+- **Database access** to MySQL or MariaDB through the core `database` class.
+- **An admin panel** for installing apps, managing users and roles, settings and logs.
+- **A frontend runtime** that loads each app's Vue components with no build step, and a UI kit of ready-made components.
+- **Background tasks, email, notifications, logging** and other shared services.
+- **Packaging.** An app moves between systems as a zip, and installs and updates from the admin panel.
 
-## **Key Features:**
+---
 
-- **Scalability:** Build applications that can scale with the growing needs of businesses.
-- **Flexibility:** Customize and extend the functionality of DoCloud with ease.
-- **Security:** Prioritize the security of applications and sensitive business data.
-- **Integration:** Seamlessly integrate with third-party services and APIs.
-- **Developer-Friendly:** Enjoy a developer-friendly environment with SDKs, documentation, and a supportive community.
+# Requirements
 
-# **Getting Started**
+- **Web server:** Apache 2.4, OpenLiteSpeed 1.7.x or later, or LiteSpeed Web Server (LSWS) 6.0 or later, with `.htaccess` support and `mod_rewrite`.
+- **HTTPS,** on a domain or subdomain of its own, with the framework at the web root.
+- **PHP 8.1 or above,** with a memory limit of 128 MB or above.
 
-### **1.0 Installation:**
+[Get Started](./framework/Get%20Started.md) has the full list, including the PHP extensions, and the install steps.
 
-Begin your journey with DoFramework by installing the necessary tools and dependencies. The installation process is straightforward, allowing you to set up your development environment quickly.
+---
 
-### 1.1 System Requirements
+# Where to start
 
-The DoCloud App SDK has the following minimum system requirements:
+| If you want to… | Read |
+| --- | --- |
+| Install the framework | [Get Started](./framework/Get%20Started.md) |
+| Understand how a request works | [Architecture](./framework/Architecture.md) |
+| Build your first app, step by step | [Todo App](./framework/Todo%20App.md) |
+| Look up an app's files and how it ships | [Building Apps](./framework/Building%20Apps/Building%20Apps.md) |
+| Use authentication, roles, email, logging and the other built-in services | [Essentials](./framework/Essentials/Essentials.md) and [Modules](./framework/Modules/Modules.md) |
+| Build the frontend | [Frontend Runtime (XP)](./framework/Frontend%20Runtime%20(XP).md) and [Vue DC UI KIT](./framework/Vue%20DC%20UI%20KIT/Vue%20DC%20UI%20KIT.md) |
+| Run a system | [Admin Panel](./framework/Admin%20Panel.md) |
+| Learn how the work is done, from first commit to release | [Developer Workflow](./Developer%20Workflow/Developer%20Workflow.md) |
 
-- Web Server : Apache 2.4 + or OpenLitespeed 1.7.x + or LSWS 6.0 + (Not Officially tested on Other web servers )
-- PHP: 8.1 or Above
-- PHP Memory Limit: 128MB or Above
-- HTTPS: required (the API refuses plain HTTP requests)
-- .htaccess support with mod_rewrite
+---
 
-### **Documentation:**
+# News and contributing
 
-Explore our extensive documentation, providing step-by-step guides, code examples, and in-depth explanations of DoFramework's features. Whether you're a novice or an experienced developer, our documentation is tailored to meet your needs.
+Framework releases and docs updates are announced on the [Dev Blog](/blog).
 
-### **Sample Applications:**
+Found a mistake on a page? These docs are Markdown in a git repository. [Contributing To The Docs](./Developer%20Workflow/Contributing%20To%20The%20Docs.md) explains how to change a page and publish it.
 
-Accelerate your learning curve by examining our collection of sample applications and templates. These examples serve as practical guides to help you understand the best practices and capabilities of DoFramework.
-
-### **Community Support:**
-
-Connect with a vibrant community of developers, share your experiences, and seek assistance when needed. The DoFramework community is a collaborative space where knowledge is shared, questions are answered, and ideas are born.
-
-### **Contributing**
-
-We encourage developers to actively contribute to the growth and improvement of DoFramework. Whether it's reporting issues, submitting pull requests, or sharing feedback, your contributions play a vital role in enhancing the framework for the entire community.
-
-## **Let's Build Together!**
-
-Thank you for choosing DoFramework. We're excited to embark on this development journey with you. Let's build powerful, innovative, and impactful applications together.
-
-👩‍💻 Happy coding!
+---

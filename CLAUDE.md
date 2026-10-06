@@ -111,8 +111,9 @@ tags: [update]
 
 The product name is spelled several ways across pages: "DoFramework", "Do Framework", "DoCloud", "Docloud". Match the spelling already used on the page you're editing. Platform requirements (PHP 8.1+, 128 MB memory limit, Apache 2.4+/OpenLiteSpeed/LSWS, `.htaccess` support) are in `docs/Home.md` and `docs/framework/Get Started.md`. Keep the two consistent if either changes.
 
+The wiki has no version number of its own. The first line of `docs/Home.md` names the framework version the docs cover ("These docs cover DoFramework 0.0.42") and links to the blog post for that docs update. Change both only once every page has been checked against the new framework version.
+
 ## Known gaps
 
 - A docs update for framework 0.0.42 is in progress. Read `DOCS-UPDATE-PROGRESS.md` first for status and what's left.
-- `Home.md` still carries the 2024 Notion introduction. Every other page was checked against framework 0.0.42.
 - Database migrations are not documented yet. They are unreleased in the framework (0.0.42 has no `Migrator`).
