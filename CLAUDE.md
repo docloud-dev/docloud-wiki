@@ -9,10 +9,10 @@ The content source for the Docloud / DoFramework documentation site (**dev.doclo
 The site itself is a **Docusaurus** project in a separate repo, `docloud-dev/docloud-docs-public`. Publishing works like this:
 
 1. A push to `main` (or `master`) runs `.github/workflows/deploy.yml`.
-2. That workflow only sends a `repository_dispatch` (`event_type: wiki_updated`) to `docloud-docs-public`, using the `PAT_TOKEN` secret.
+2. That workflow only sends a `repository_dispatch` (`event_type: wiki_updated`) to `docloud-docs-public`, using the `PAT_TOKEN` secret: a fine-grained token with Contents read and write on `docloud-docs-public`. The `curl` uses `-f`, so a rejected call (for example an expired token, `401 Bad credentials`) fails the run. Before that flag was added, the run stayed green while nothing deployed.
 3. The site repo pulls this content, builds and deploys it. Changes go live in about 60–90 seconds.
 
-Day-to-day work happens on `dev`. Merging or pushing to `main` **publishes to the live site**, so do it only when the user asks. A Docusaurus build failure (for example an MDX parse error) shows up in the `docloud-docs-public` repo's Actions, not here, so check locally first.
+Day-to-day work happens on `dev`. Merging or pushing to `main` **publishes to the live site**, so do it only when the user asks. A Docusaurus build failure (for example an MDX parse error) shows up in the `docloud-docs-public` repo's Actions, not here, so check locally first. After publishing, check that the site repo's Actions has a new `wiki_updated` run. To redeploy without a wiki push: `gh api repos/docloud-dev/docloud-docs-public/dispatches -f event_type=wiki_updated`.
 
 ## Previewing
 

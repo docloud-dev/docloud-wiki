@@ -29,6 +29,8 @@ This page covers editing, previewing and publishing a change, the conventions ev
 
 A build failure, such as an MDX parse error, shows up in the **Actions** tab of `docloud-docs-public`, not in the wiki, and the live site keeps the previous version. Preview your change locally first so this doesn't happen.
 
+If the wiki's **Trigger Website Build** run fails, the site wasn't told to rebuild. The usual cause is an expired `PAT_TOKEN` secret, which GitHub answers with `401 Bad credentials`. Renew the token, then rerun the failed run.
+
 Because a push to `main` publishes, everyday work happens on the `dev` branch.
 
 ---
