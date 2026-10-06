@@ -64,7 +64,7 @@ Because a push to `main` publishes, everyday work happens on the `dev` branch.
 
 - On the first run it clones `docloud-docs-public` next to the wiki, at `../docloud-docs-public`, and runs `npm install`. Set `SITE_DIR` to use a clone somewhere else.
 - **Run `./preview.sh build` before you merge to `main`.** The dev server forgives errors that fail the production build, such as broken links and anchors.
-- The copied content shows up as changes in the site repository's `git status`. Never commit it there.
+- The site repository ignores its `docs/` and `blog/` folders, so the copied content stays out of its `git status`. Edit the content in the wiki, never in the site repository.
 
 ---
 

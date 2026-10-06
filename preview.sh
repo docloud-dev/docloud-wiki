@@ -5,8 +5,8 @@
 #   ./preview.sh build    sync once and run the production build (what the deploy runs)
 #
 # The site repo is expected next to this one; set SITE_DIR to use another path.
-# It is cloned and installed on first run. Synced content shows up as changes in
-# the site repo's git status: never commit it there.
+# It is cloned and installed on first run. The site repo gitignores docs/ and
+# blog/, so the synced content stays out of its git status.
 
 set -euo pipefail
 

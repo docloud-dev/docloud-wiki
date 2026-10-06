@@ -16,7 +16,7 @@ Day-to-day work happens on `dev`. Merging or pushing to `main` **publishes to th
 
 ## Previewing
 
-`./preview.sh` copies `docs/` and `blog/` into a local clone of the site repo (`../docloud-docs-public`, cloned and installed on first run; override with `SITE_DIR`) the same way the deploy does, then starts the dev server at `http://localhost:3000` and keeps copying edits every second. `./preview.sh build` runs the production build instead. Run it before merging to `main`, because it catches the MDX errors that would otherwise break the deploy. The copied content shows up as changes in the site repo's `git status`; never commit it there.
+`./preview.sh` copies `docs/` and `blog/` into a local clone of the site repo (`../docloud-docs-public`, cloned and installed on first run; override with `SITE_DIR`) the same way the deploy does, then starts the dev server at `http://localhost:3000` and keeps copying edits every second. `./preview.sh build` runs the production build instead. Run it before merging to `main`, because it catches the MDX errors that would otherwise break the deploy. The site repo gitignores its `docs/` and `blog/`, so the copied content never shows up in its `git status`.
 
 The repo root is also an **Obsidian vault** (`.obsidian/`). Contributors edit in Obsidian or VS Code. The shared vault config (`app.json`, `appearance.json`, `core-plugins.json`) is tracked. Per-user state such as `workspace.json` is gitignored.
 
