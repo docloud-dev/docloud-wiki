@@ -46,6 +46,7 @@ You build features as **apps**. An app is a self-contained unit with its own rou
 | Use authentication, roles, email, logging and the other built-in services | [Essentials](./framework/Essentials/Essentials.md) and [Modules](./framework/Modules/Modules.md) |
 | Build the frontend | [Frontend Runtime (XP)](./framework/Frontend%20Runtime%20(XP).md) and [Vue DC UI KIT](./framework/Vue%20DC%20UI%20KIT/Vue%20DC%20UI%20KIT.md) |
 | Run a system | [Admin Panel](./framework/Admin%20Panel.md) |
+| Update a system to a newer framework release | [Upgrading The Framework](./framework/Upgrading%20The%20Framework.md) |
 | Learn how the work is done, from first commit to release | [Developer Workflow](./Developer%20Workflow/Developer%20Workflow.md) |
 
 ---

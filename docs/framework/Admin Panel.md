@@ -19,6 +19,7 @@ The sidebar has these menus:
 | Dashboard | Server and PHP details. |
 | Logs | The error log and the admin activity log. |
 | Apps | Install, update, reinitialise, export and remove apps. |
+| Migrations | Each app's database migrations: run, roll back, or sync an app's tables. |
 | Scheduler | The heartbeat's scheduled tasks. |
 | Roles | User roles, their permissions and their members. |
 | Notifications | Which notifications each role gets, and how. |
@@ -63,10 +64,10 @@ The **Dashboard** lists the PHP version, the server software, PHP's memory limit
 
 **Installed Apps** shows a card for each app, with a search on the app's display name. Click an app's gear to open **Manage App**:
 
-- **Reinitialize** reruns the app's install steps on the system (tables, options, permissions, roles). It runs straight away, without a confirmation.
+- **Reinitialize** reruns the app's install steps on the system (tables or migrations, options, permissions, roles). It runs straight away, without a confirmation. If one of the app's migrations fails, the rest still runs and the panel shows `Migration <name> failed: <error>`.
 - **Check for update** lists the app's versions on DoCloud. **Get the update** downloads one and opens the install screen.
 - **Download App** exports the app as a zip.
-- The trash icon removes the app. The confirmation has one option, **Remove database records and tables**, unticked by default. Leave it unticked to keep the app's tables and data.
+- The trash icon removes the app. The confirmation has one option, **Remove database records and tables**, unticked by default. Leave it unticked to keep the app's tables and data. For an app with migrations, ticking it resets the app's migrations instead of dropping its `<createTables>` tables.
 
 **DoCloud App Store** lists the apps in the DoCloud App Library. Pick a version to install. The install button stays disabled unless the app is compatible with the system.
 
@@ -80,6 +81,17 @@ For what install, update, reinitialise, export and remove each do, see [Packagin
 ⚠️ Don't remove the system apps: `auth`, `xp_users`, `xp_system`, `xp_notification`, `xp_email` and `system_admin_app`. The panel doesn't stop you, and the system stops working without them.
 
 </aside>
+
+---
+
+# How to manage migrations
+
+**Migrations** lists every app with how it gets its tables. Apps with migrations come first, with their status: up to date, pending, missing or an error. The rest are grouped under **No migrations** and tagged XML (tables from `<createTables>`) or No tables.
+
+- For an app with migrations, the page lists each migration with its batch, when it ran and who ran it. **Run pending** runs the pending ones. **Roll back** undoes the last batch, the last few migrations, or everything after a chosen one, after a preview of exactly what it will undo. In production you type the app name to confirm.
+- For an XML app, **Sync tables** creates missing tables and brings columns, keys and collation in line with `<createTables>`, without the rest of a reinitialize. The page also shows the command that converts the app to migrations.
+
+Each action needs its own admin permission. Resetting an app and writing migrations are done on the command line. See [Database Migrations](./Building%20Apps/Database%20Migrations.md) for how migrations work and what each action does.
 
 ---
 
@@ -184,9 +196,10 @@ Both run the same steps:
 
 1. The current system status is noted, and the system goes into maintenance.
 2. A full backup is taken. If it fails, the update stops with "System backup failed. Update aborted." and the status is set back.
-3. The framework files are replaced.
-4. The system apps' manifests are merged with the new ones, and each system app whose manifest changed is reinitialised.
-5. The status from step 1 is set back.
+3. The system apps' manifests in the package are merged with the installed ones, and the framework files are replaced.
+4. The package's update script runs.
+5. Each system app whose manifest changed is reinitialised, `xp_users` first. This runs any new migrations of those apps.
+6. The status from step 1 is set back.
 
 While the update runs, the site's API answers `503` and only the admin panel works. See [Maintenance and down mode](./Architecture.md#maintenance-and-down-mode).
 
@@ -196,6 +209,8 @@ While the update runs, the site's API answers `503` and only the admin panel wor
 </aside>
 
 Log in again after an update so that your session picks up any new admin permissions.
+
+Updating an install from 0.0.40 or older needs manual steps afterwards. [Upgrading The Framework](./Upgrading%20The%20Framework.md) lists them, with the permissions an update needs and the log entries to expect.
 
 ---
 
