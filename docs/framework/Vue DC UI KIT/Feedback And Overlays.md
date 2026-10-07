@@ -301,7 +301,7 @@ With `steps` set, the bar's width is `modelValue` out of `steps`, and the bar is
 The track and the label get the class `completed` when the bar is full, and `no-progress` when `modelValue` is `0` and `in_progress` isn't set.
 
 <aside>
-⚠️ In framework 0.0.42 no stylesheet defines `dc-container`, `dc-progress` or `dc-progress-text`, the classes the bar is drawn with. Only the label (`3/5` or `40%`) shows: the track and the fill have no height or colour, and `completed` and `no-progress` change nothing. Also, `steps` defaults to the string `"0"`, which counts as set. For a percentage bar, pass `:steps="0"`, or the width is worked out by dividing by zero and the bar never counts as complete.
+⚠️ In framework 0.0.44 no stylesheet defines `dc-container`, `dc-progress` or `dc-progress-text`, the classes the bar is drawn with. Only the label (`3/5` or `40%`) shows: the track and the fill have no height or colour, and `completed` and `no-progress` change nothing. Also, `steps` defaults to the string `"0"`, which counts as set. For a percentage bar, pass `:steps="0"`, or the width is worked out by dividing by zero and the bar never counts as complete.
 
 </aside>
 

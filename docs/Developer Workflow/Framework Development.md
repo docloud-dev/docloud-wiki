@@ -67,7 +67,7 @@ fix: the retention setting reports a failed save
 refactor: add types and asserts
 docs: changelog entries for the uploader fixes
 test: bump-version refuses a lower version
-chore: bump framework version to 0.0.42
+chore: bump framework version to 0.0.44
 ```
 
 - **Types:** `feat` for new behaviour, `fix` for a bug, `refactor` for a change that keeps behaviour the same, `test` for tests, `docs` for documentation and the changelog, `chore` for version bumps and housekeeping.
@@ -137,7 +137,7 @@ test('a missing live copy is created from its template', function () {
     $root = scratch_root();
     $template = "$root/xp-config.json.dist";
     $live = "$root/xp-config.json";
-    file_put_contents($template, ConfigTemplates::encode_json(['version' => '0.0.42']));
+    file_put_contents($template, ConfigTemplates::encode_json(['version' => '0.0.44']));
 
     assert_same(true, ConfigTemplates::sync_json($template, $live));
     assert_same(file_get_contents($template), file_get_contents($live));
@@ -186,9 +186,9 @@ Release from `master`, with everything for the release merged.
    ```bash
    git diff
    git add README.md CHANGELOG.md xp-config.json.dist api/admin/xp-config.json.dist api/config.xml.dist
-   git commit -m "chore: bump framework version to 0.0.43"
-   git tag v0.0.43
-   git push origin master v0.0.43
+   git commit -m "chore: bump framework version to 0.0.45"
+   git tag v0.0.45
+   git push origin master v0.0.45
    ```
 
    `bump-version` doesn't commit or tag. The live copies it also changed stay out of git.

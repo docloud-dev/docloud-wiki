@@ -413,7 +413,7 @@ The **`getAppVersion`** method returns `version` from `xp-config.json`. This is 
 Syntax:
 
 ```jsx
-const version = XP.getAppVersion(); // "0.0.42"
+const version = XP.getAppVersion(); // "0.0.44"
 ```
 
 **Return Value:**

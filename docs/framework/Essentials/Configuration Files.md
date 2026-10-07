@@ -248,7 +248,7 @@ The main backend config, created from `api/config.xml.dist`. Placeholders are in
 <config>
   <system>
     <!-- Release-owned: reset from the template on every request. -->
-    <api_version>0.0.42</api_version>
+    <api_version>0.0.44</api_version>
     <!-- Which overlay to read: api/config.<this value>.xml.
          APP_CONFIG_ENV overrides it. "initiate" before setup. -->
     <system_environment>development</system_environment>
@@ -439,9 +439,9 @@ The main app's frontend config, at the site root and created from `xp-config.jso
 
 ```json
 {
-    "version": "0.0.42",
-    "release_date": "2026-10-02",
-    "res_version": "0.0.42",
+    "version": "0.0.44",
+    "release_date": "2026-10-07",
+    "res_version": "0.0.44",
     "last_impact_time": 1714129151,
     "mode": "dev",
     "doc_title": "My App",

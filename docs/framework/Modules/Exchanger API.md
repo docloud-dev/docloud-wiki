@@ -20,7 +20,7 @@ The Exchanger API module stores OAuth2 tokens for external APIs and includes a c
 `ExchangerApi` is loaded automatically. The other classes load with it, so get them through the `ExchangerApi` factory methods.
 
 <aside>
-⚠️ In v0.0.42 the module can't be loaded. The QuickBooks client file includes the logging module a second time, so the first reference to `ExchangerApi` in a request stops PHP with the fatal error "Cannot declare class Loging". The rest of this page describes the module as written.
+⚠️ In v0.0.44 the module can't be loaded. The QuickBooks client file includes the logging module a second time, so the first reference to `ExchangerApi` in a request stops PHP with the fatal error "Cannot declare class Loging". The rest of this page describes the module as written.
 
 </aside>
 

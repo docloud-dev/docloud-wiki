@@ -326,7 +326,7 @@ Description:
 The **`insertMultiple`** method is meant to insert several rows in one call.
 
 <aside>
-⚠️ In v0.0.42 it builds one statement with a value group per row, then runs that statement once per row. Each row is inserted once for every row in the batch: three rows give nine. Call `insertInToTable` in a loop, or use a DAO, until this is fixed.
+⚠️ In v0.0.44 it builds one statement with a value group per row, then runs that statement once per row. Each row is inserted once for every row in the batch: three rows give nine. Call `insertInToTable` in a loop, or use a DAO, until this is fixed.
 
 </aside>
 
@@ -442,7 +442,7 @@ Description:
 The **`getRecordsLimited`** method returns one page of rows. Note the order of the WHERE parameters: value first, then column.
 
 <aside>
-⚠️ In v0.0.42 the WHERE clause is missing its closing quote, so any call with a WHERE pair fails and returns `false`. Calls without a filter work.
+⚠️ In v0.0.44 the WHERE clause is missing its closing quote, so any call with a WHERE pair fails and returns `false`. Calls without a filter work.
 
 </aside>
 
@@ -704,7 +704,7 @@ Description:
 The **`getNextAutoIncrementID`** method is meant to return a table's next `AUTO_INCREMENT` value. It doesn't add the app prefix and it reads the database named in the config file.
 
 <aside>
-⚠️ In v0.0.42 it throws a `TypeError` whenever the table exists, because it returns the result row where its signature promises an integer. Don't use it.
+⚠️ In v0.0.44 it throws a `TypeError` whenever the table exists, because it returns the result row where its signature promises an integer. Don't use it.
 
 </aside>
 

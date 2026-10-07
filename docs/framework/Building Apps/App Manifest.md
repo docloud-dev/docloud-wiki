@@ -51,7 +51,7 @@ This manifest declares every element. Copy it, rename `myapp` and delete the blo
         <app_author>Example Ltd</app_author>
         <display_name>My App</display_name>
         <app_version>1.0.0</app_version>
-        <api_version>0.0.42</api_version>
+        <api_version>0.0.44</api_version>
         <app_icon>fas fa-globe-americas</app_icon>
         <app_image src="/assets/images/app_icons/app-icon.png"/>
         <app_type>custom</app_type>

@@ -77,7 +77,7 @@ None.
 
 ## DcConfDevLogo
 
-The DoCloud logo (in colour) followed by the "Developer" wordmark. Use it the same way as `DcConfLogo`, inside a `dc-cp-header`. The framework doesn't use it on any of its own screens at 0.0.42.
+The DoCloud logo (in colour) followed by the "Developer" wordmark. Use it the same way as `DcConfLogo`, inside a `dc-cp-header`. The framework doesn't use it on any of its own screens at 0.0.44.
 
 ```jsx
 import { DcConfDevLogo } from "../../xp_system/components/dc_ui_kit_componenets/dc_ui_kit_registry.js";
@@ -359,7 +359,7 @@ None.
 
 ## DcConfNeedSupport
 
-A centred "Need Support? Contact us" line, meant to sit under a setup card. The framework doesn't use it on any of its own screens at 0.0.42.
+A centred "Need Support? Contact us" line, meant to sit under a setup card. The framework doesn't use it on any of its own screens at 0.0.44.
 
 ```jsx
 import { DcConfNeedSupport } from "../../xp_system/components/dc_ui_kit_componenets/dc_ui_kit_registry.js";
@@ -381,7 +381,7 @@ export default {
 None.
 
 <aside>
-⚠️ "Contact us" has no link target at 0.0.42: the component reads a contact address it never defines, so the text renders as an anchor without an `href` and clicking it does nothing. Write your own support line with a [DcLink](./Buttons%20And%20Links.md) until this is fixed.
+⚠️ "Contact us" has no link target at 0.0.44: the component reads a contact address it never defines, so the text renders as an anchor without an `href` and clicking it does nothing. Write your own support line with a [DcLink](./Buttons%20And%20Links.md) until this is fixed.
 
 </aside>
 
@@ -404,7 +404,7 @@ export default {
 };
 ```
 
-The framework's sign-in and welcome screens used to show it. At 0.0.42 they show the system logo set in the admin panel instead, and the tag is commented out.
+The framework's sign-in and welcome screens used to show it. At 0.0.44 they show the system logo set in the admin panel instead, and the tag is commented out.
 
 **Props**
 

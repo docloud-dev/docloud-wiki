@@ -27,7 +27,7 @@ Curl wraps PHP's cURL for calling web services. It sends GET, POST, PUT and DELE
 
 ## Custom Fields
 
-Custom Fields stores definitions of extra fields that an app lets users add to its records, such as a "Customer tier" on a contact. Definitions live in shared `xp_system_custom_fields` tables, grouped by app. Optional conditions and actions call a handler class in your app when a field's value changes, and the app stores the values itself. No framework app uses the module yet, and parts of it need workarounds in 0.0.42, which the page describes.
+Custom Fields stores definitions of extra fields that an app lets users add to its records, such as a "Customer tier" on a contact. Definitions live in shared `xp_system_custom_fields` tables, grouped by app. Optional conditions and actions call a handler class in your app when a field's value changes, and the app stores the values itself. No framework app uses the module yet, and parts of it need workarounds in 0.0.44, which the page describes.
 
 ---
 
@@ -39,7 +39,7 @@ Encryption encrypts and decrypts strings with the system's `encryption_key`, cre
 
 ## Exchanger API
 
-Exchanger API connects the framework to QuickBooks over OAuth 2. It stores the tokens in its own table, keeps them in the session, checks the connection, and wraps the QuickBooks calls for authorization, queries, batches and invoice PDFs. In 0.0.42 the module can't be loaded as shipped and the QuickBooks SDK isn't included; the page explains both.
+Exchanger API connects the framework to QuickBooks over OAuth 2. It stores the tokens in its own table, keeps them in the session, checks the connection, and wraps the QuickBooks calls for authorization, queries, batches and invoice PDFs. In 0.0.44 the module can't be loaded as shipped and the QuickBooks SDK isn't included; the page explains both.
 
 ---
 

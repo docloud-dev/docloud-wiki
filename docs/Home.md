@@ -7,7 +7,7 @@ sidebar_position: 1
 
 # DoFramework Docs
 
-These docs cover **DoFramework 0.0.42**. See [what changed in this update](/blog/docs-for-framework-0-0-42).
+These docs cover **DoFramework 0.0.44**. See [what changed in this update](/blog/docs-for-framework-0-0-44).
 
 # Introduction
 

@@ -156,7 +156,7 @@ Each entry in `menus` can appear in two places:
 - **The megabar**, a full-screen menu of every app, when `position.megabar` is `true`. It shows each entry's icon, label and `description`.
 
 <aside>
-⚠️ In 0.0.42 the **Menu** button of the current sidebar (`dc_sidebar.js`, used by the dashboard, Settings and most app pages) doesn't open the megabar. Only the older `sidebar.js` and `topbar.js` components, still used by a few framework pages, open it. Set `position.megabar` anyway, so your entry appears wherever the megabar is shown.
+⚠️ In 0.0.44 the **Menu** button of the current sidebar (`dc_sidebar.js`, used by the dashboard, Settings and most app pages) doesn't open the megabar. Only the older `sidebar.js` and `topbar.js` components, still used by a few framework pages, open it. Set `position.megabar` anyway, so your entry appears wherever the megabar is shown.
 
 </aside>
 

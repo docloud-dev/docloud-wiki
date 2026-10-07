@@ -119,7 +119,7 @@ Create `dev/todo/backend/todo/todo.xml`:
         <app_author>Your Name</app_author>
         <display_name>Todo</display_name>
         <app_version>1.0.0</app_version>
-        <api_version>0.0.42</api_version>
+        <api_version>0.0.44</api_version>
         <app_icon>fa-regular fa-circle-check</app_icon>
         <app_type>custom</app_type>
         <status>active</status>

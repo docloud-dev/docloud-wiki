@@ -77,10 +77,10 @@ For the `helloworld` app it looks like this (the `<info>` block is shortened):
   <info>
     <app_name>helloworld</app_name>
     <display_name>Hello World</display_name>
-    <app_version>1.1.2</app_version>
+    <app_version>1.2.0</app_version>
     <api_version>0.0.21</api_version>
     <status>active</status>
-    <release_date>2026-10-02</release_date>
+    <release_date>2026-10-07</release_date>
   </info>
   <user_permissions>
     <permission display_name="Get hello world data" name="get_hello_data" auto_update="true"/>
@@ -254,7 +254,7 @@ Nothing checks that they agree for your app (`./bump-version` checks only the fr
 <info>
     <app_name>myapp</app_name>
     <app_version>1.2.0</app_version>
-    <api_version>0.0.42</api_version>
+    <api_version>0.0.44</api_version>
     <release_date>2026-10-05</release_date>
 </info>
 ```

@@ -22,7 +22,7 @@ It uses three tables, shared by every app:
 `CustomFields` is loaded automatically. `CustomFieldsActionManager` and the `CustomFieldsAction` base class load with it, so reference `CustomFields` first (for example with `class_exists('CustomFields')`) before you use them directly.
 
 <aside>
-⚠️ In v0.0.42 no framework app, admin page or `xp.js` function uses this module, and there is no UI for it. Parts of it don't work as written: the setup creates the actions table under the wrong name, and the app detection fails in the dev workspace. The warnings below say what to do about each.
+⚠️ In v0.0.44 no framework app, admin page or `xp.js` function uses this module, and there is no UI for it. Parts of it don't work as written: the setup creates the actions table under the wrong name, and the app detection fails in the dev workspace. The warnings below say what to do about each.
 
 </aside>
 

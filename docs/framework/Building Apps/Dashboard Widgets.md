@@ -18,7 +18,7 @@ The dashboard route is set up in `apps/xp_system/route.js`:
 
 The greeting depends on the browser's local hour: "Good Morning" from 5:00, "Good Afternoon" from 12:00, "Good Evening" from 17:00, and "Hello" from 22:00 until 5:00. The user's first name is added when it is known, for example "Good Morning, Ada!".
 
-This page covers the framework dashboard as of DoFramework 0.0.42. For the rest of `app-config.json`, see [App Frontend Config](./App%20Frontend%20Config.md). For the `XP` methods used here, see [Frontend Runtime (XP)](../Frontend%20Runtime%20%28XP%29.md).
+This page covers the framework dashboard as of DoFramework 0.0.44. For the rest of `app-config.json`, see [App Frontend Config](./App%20Frontend%20Config.md). For the `XP` methods used here, see [Frontend Runtime (XP)](../Frontend%20Runtime%20%28XP%29.md).
 
 ---
 
