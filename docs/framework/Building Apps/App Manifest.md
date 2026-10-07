@@ -429,7 +429,7 @@ Provisioned on every reinit, and only adds: a grant an admin revoked stays revok
 </app_options>
 ```
 
-**Optional.** Key-value settings for the app, stored in a table you declare in `<createTables>`. Option reads use the declaration as it is in the file. Install and every reinit insert any allowed option that isn't in the table yet. See [App Options](../Essentials/App%20Options.md).
+**Optional.** Key-value settings for the app, stored in a table your app creates, in a migration (preferred) or in `<createTables>`. Option reads use the declaration as it is in the file. Install and every reinit insert any allowed option that isn't in the table yet. See [App Options](../Essentials/App%20Options.md).
 
 ---
 
@@ -448,7 +448,10 @@ Provisioned on every reinit, and only adds: a grant an admin revoked stays revok
 
 [How to define your tables](../Modules/App%20Manager.md) lists every `<table>` and `<column>` attribute, and [initialize_app](../Modules/App%20Manager.md#initialize_app) covers how changes converge.
 
-An app can keep its schema in migrations instead, and new apps should. An app with any migration file ignores `<createTables>`. See [Database Migrations](./Database%20Migrations.md).
+<aside>
+💡 Migrations are the preferred way to manage an app's tables. Use them instead of `<createTables>` for new apps, and convert existing apps with `make:baseline`. `<createTables>` is still supported. An app with any migration file ignores it. See [Database Migrations](./Database%20Migrations.md).
+
+</aside>
 
 ---
 

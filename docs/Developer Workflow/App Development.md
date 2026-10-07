@@ -59,14 +59,15 @@ Use a separate install for development. Development mode returns the admin login
    git push -u origin main
    ```
 
-5. Back in the framework root, keep the links out of the framework checkout's `git status`:
+5. Load any page of the site, then reload it. The first API request creates the links, and the app appears on the admin panel's **Apps** page. The framework's `.gitignore` already keeps the links out of the framework checkout's `git status`.
+6. Create the app's tables in a migration, from the framework root:
 
    ```bash
-   printf '/apps/myapp\n/api/apps/myapp\n/api/admin/apps/myapp\n' >> .git/info/exclude
+   php api/migrate.php make myapp create_tables
    ```
 
-6. Load any page of the site, then reload it. The first API request creates the links, and the app appears on the admin panel's **Apps** page.
-7. Reinitialize the app (**Apps**, the gear icon on the app's card, **Reinitialize**). This creates its tables and grants its permissions to the `system_admin` role.
+   This writes `dev/myapp/backend/myapp/migrations/<YYYYMMDDHHMMSS>_create_tables.php`. Put your `CREATE TABLE` statements in its `up()` and the matching `DROP TABLE` in its `down()`. Use migrations, not `<createTables>`, for every new app. See [Database Migrations](../framework/Building%20Apps/Database%20Migrations.md).
+7. Reinitialize the app (**Apps**, the gear icon on the app's card, **Reinitialize**). This runs its migrations and grants its permissions to the `system_admin` role.
 
 To work on an existing app, clone its repository into `dev/` instead of steps 2 to 4, and name the clone folder after the app:
 
@@ -87,9 +88,10 @@ What you do after an edit depends on what you changed:
 | A frontend file (`route.js`, a component, `services.js`, CSS) | Reload the page. There is no build step: the framework rebuilds its bundles on every page load. |
 | A backend class (controller, model, DAO) | Call the endpoint again. PHP reads the file on every request. |
 | `app-config.json` (menus, resources, widgets) | Reload the page. |
-| The manifest's tables, permissions or roles | Reinitialize the app, then log out of the admin panel and back in if you changed admin permissions. |
+| The schema | Add a new migration (`php api/migrate.php make myapp <name>`), then reinitialize the app or run `php api/migrate.php migrate myapp`. Don't edit a migration that has already run: it won't run again. |
+| The manifest's permissions or roles | Reinitialize the app, then log out of the admin panel and back in if you changed admin permissions. |
 
-A reinitialize only adds. It creates missing tables and columns and grants new `auto_update` permissions, but it never drops a table or column and never takes back a grant. Remove those by hand on your development database. See [App Manager](../framework/Modules/App%20Manager.md) for what it does.
+A reinitialize runs the app's pending migrations and grants new `auto_update` permissions, but it never takes back a grant. Each schema change, including a rename or a drop, is a migration of its own. See [Database Migrations](../framework/Building%20Apps/Database%20Migrations.md) and [App Manager](../framework/Modules/App%20Manager.md) for what a reinitialize does.
 
 Commit in small steps, each with a conventional subject:
 

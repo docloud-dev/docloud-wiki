@@ -63,6 +63,6 @@ Packaging And Updates covers getting an app onto other systems: exporting it fro
 
 ## Database Migrations
 
-Database Migrations explains how an app keeps its schema in PHP migration files instead of `<createTables>`. It covers when migrations run and how they're recorded, writing `up()` and `down()`, converting an existing app with a baseline, rolling back and resetting, the `php api/migrate.php` command, and the admin panel's Migrations page.
+Database Migrations explains how an app keeps its schema in PHP migration files instead of `<createTables>`. Migrations are the preferred way to manage an app's tables. It covers when migrations run and how they're recorded, writing `up()` and `down()`, converting an existing app with a baseline, rolling back and resetting, the `php api/migrate.php` command, and the admin panel's Migrations page.
 
 ---

@@ -13,7 +13,7 @@ An app builds its tables in one of two ways, never both:
 - **`<createTables>`** in its manifest (see [App Manifest](./App%20Manifest.md)). Install and every reinit converge the database to it: they create tables, add columns, and adjust types and keys. They never rename, drop or move data.
 - **Migrations**: PHP files in the app's `migrations/` folder. Each file makes one change, runs once, can change data as well as structure, and can be undone.
 
-Use migrations when a change needs more than "add what's missing": renaming a column, dropping one, splitting a table, backfilling data. Start new apps on migrations.
+**Migrations are the preferred way to manage an app's tables.** Use them for every new app, and move existing apps to them with a baseline (see "How to convert an app from `<createTables>`" below). `<createTables>` is still supported, so an app that uses it keeps working, but it can only add: it can't rename a column, drop one, split a table or backfill data. Migrations can do all of these.
 
 The folder sits next to the manifest: `api/apps/<app>/migrations/` in production, `dev/<app>/backend/<app>/migrations/` while you develop. **As soon as that folder holds one migration, the app uses migrations only.** Its `<createTables>` is ignored, and every reinit logs a warning while it's still in the manifest. Every `.php` file directly in the folder counts as a migration, except `reset.php` (see Resetting an app below). Subfolders are ignored, so keep other PHP files out of `migrations/`.
 

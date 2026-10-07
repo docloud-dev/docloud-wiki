@@ -24,7 +24,7 @@ All values are stored as strings. When you write `true` or `false`, the framewor
 
 # How to declare options
 
-Add an `<app_options>` block to your app's XML manifest (for example `api/apps/myapp/myapp.xml`). Also declare the options table in `<createTables>`. The framework does not create the table for you.
+Add an `<app_options>` block to your app's XML manifest (for example `api/apps/myapp/myapp.xml`), and create the options table in a migration. The framework does not create the table for you.
 
 ```xml
 <app_options active="true">
@@ -39,19 +39,39 @@ Add an `<app_options>` block to your app's XML manifest (for example `api/apps/m
     </allowed_options>
 </app_options>
 
-<createTables>
-    <table name="options">
-        <column name="id" type="bigint" size="20" default="" attributes="UNSIGNED" null="false" autoincrement="true" primarykey="true" index="true"/>
-        <column name="name" type="varchar" size="255" default="" attributes="" null="false" index="true"/>
-        <column name="value" type="longtext" size="" default="" attributes="" null="true"/>
-        <column name="updated_at" type="datetime" size="" default="" attributes="" null="true"/>
-        <column name="updated_by" type="bigint" size="20" default="" attributes="UNSIGNED" null="true" index="true"/>
-    </table>
-</createTables>
+```
+
+```php
+<?php
+
+// migrations/20261007120000_create_options.php
+return new class extends Migration {
+    public function up(): void
+    {
+        $this->execute(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS myapp_options (
+                id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+                name varchar(255) NOT NULL,
+                value longtext NULL,
+                updated_at datetime NULL,
+                updated_by bigint(20) UNSIGNED NULL,
+                PRIMARY KEY (id),
+                INDEX name_index (name),
+                INDEX updated_by_index (updated_by)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            SQL);
+    }
+
+    public function down(): void
+    {
+        $this->dropTableIfExists('myapp_options');
+    }
+};
 ```
 
 - `active="true"` turns the block on. With any other value, the app's options are not read.
-- `<db_table>` names the table and its columns. All five attributes are required. Write the table name without the app prefix: `options` becomes the table `myapp_options`.
+- `<db_table>` names the table and its columns. All five attributes are required. Write the table name without the app prefix: `options` means the table `myapp_options`, which the migration creates under that full name.
+- An app still on `<createTables>` declares the table there instead, as `<table name="options">` with the same columns. New apps should use a migration (see [Database Migrations](../Building%20Apps/Database%20Migrations.md)).
 - Each `<option>` in `<allowed_options>` has a `name` and an optional `default_value`.
 
 The framework seeds the options every time the app is initialized: when it is installed, and when it is reinitialized from the admin panel. Each allowed option that is not in the table yet is inserted with its `default_value`, or an empty string. Options that already exist keep their values. You don't need a run script for this.

@@ -33,7 +33,10 @@ Two rules apply to every `AppManager` table helper:
 
 Declare tables in the `<createTables>` block of your manifest, `api/apps/myapp/myapp.xml`. The framework creates them when the app is installed and converges them on every reinit.
 
-An app can keep its schema in migration files instead, and new apps should. As soon as an app has one migration, its `<createTables>` is ignored. See [Database Migrations](../Building%20Apps/Database%20Migrations.md).
+<aside>
+💡 Migrations are the preferred way to manage an app's tables. Use them instead of `<createTables>` for new apps, and convert existing apps with `make:baseline`. `<createTables>` is still supported, and this section describes it. As soon as an app has one migration, its `<createTables>` is ignored. See [Database Migrations](../Building%20Apps/Database%20Migrations.md).
+
+</aside>
 
 ```xml
 <createTables charset="utf8mb4" collation="utf8mb4_unicode_ci">

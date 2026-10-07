@@ -115,6 +115,10 @@ tags: [update]
 - **Security weaknesses:** never describe one on the site. Report it to the framework team instead.
 - **Links:** relative links encode spaces as `%20`. Link only to anchors on `##` or deeper headings: Docusaurus gives no anchor to H1 sections after the title, and the anchor checker rejects anchors into pages with parentheses in their names. In blog posts the truncate marker is `{/* truncate */}`, because MDX rejects `<!-- -->`.
 
+## Database tables: migrations first
+
+Migrations are the preferred way to manage an app's tables; `<createTables>` is still supported but legacy. Always steer new apps to migrations: any tutorial, walkthrough or example that creates tables for a new app uses a migration (`php api/migrate.php make <app> <name>`), not `<createTables>`. Pages that document `<createTables>` itself say near the top that migrations are preferred and link to `docs/framework/Building Apps/Database Migrations.md`. Show a `<createTables>` alternative only for apps that still use it.
+
 ## Terminology
 
 The product name is spelled several ways across pages: "DoFramework", "Do Framework", "DoCloud", "Docloud". Match the spelling already used on the page you're editing. Platform requirements (PHP 8.1+, 128 MB memory limit, Apache 2.4+/OpenLiteSpeed/LSWS, `.htaccess` support) are in `docs/Home.md` and `docs/framework/Get Started.md`. Keep the two consistent if either changes.
