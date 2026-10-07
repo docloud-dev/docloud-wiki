@@ -172,7 +172,7 @@ $upload = $files['attachment'] ?? null;
 
 </aside>
 
-On the command line `getType()` returns `cli`, not `GET` or `POST`. The `Request` constructor also stops any web request that didn't arrive over HTTPS with `497 Please Use HTTPS!`.
+On the command line `getType()` returns `cli`, not `GET` or `POST`. The `Request` constructor also stops any web request that didn't arrive over HTTPS with `497 Please Use HTTPS!`, and any request whose body was over PHP's `post_max_size` with `413`. PHP drops such a body, so without this the action would report its fields and files as missing.
 
 ---
 

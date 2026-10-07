@@ -135,7 +135,7 @@ Segments after the action are ignored. Pass data as a query string or in the req
 
 1. Lower-cases the controller name and appends `Controller`, so `/api/MyApp/...` also loads `myappController`.
 2. Reads the request data. For `GET` it uses `$_GET`. For `POST` it uses `$_POST`, or the decoded JSON body when `Content-Type` is `application/json`, and passes `$_FILES` along. Other HTTP methods get no usable data.
-3. Builds a `Request` with the controller, action, data and files. The `Request` constructor stops with `497` when the request did not arrive over HTTPS.
+3. Builds a `Request` with the controller, action, data and files. The `Request` constructor stops with `497` when the request did not arrive over HTTPS, and with `413` when its body was larger than PHP's `post_max_size`. PHP throws such a body away, so the action would otherwise see no fields and no files.
 4. Returns `501` when no `myappController` class exists.
 5. Calls `authenticate()`. When it returns `false`, the response is `401 Not Authorized`. When it returns `true`, it calls `Render()`.
 
@@ -286,6 +286,7 @@ The body is pretty-printed JSON:
 | `400` | `Arigato!` | The URL has no controller or no action |
 | `400` | `Bad request` | `Response::badRequest()`, the usual answer for an unsupported HTTP method |
 | `401` | `Not Authorized` | `authenticate()` returned `false` |
+| `413` | `The upload is larger than this server accepts (<limit>). Raise post_max_size and upload_max_filesize in php.ini.` | The request body was over `post_max_size` |
 | `497` | `Please Use HTTPS!` | The request did not arrive over HTTPS |
 | `500` | `Health Check Failed` | The health check failed |
 | `500` | `Exception: <message>` | An uncaught exception |

@@ -41,7 +41,7 @@ An app can keep its schema in migration files instead, and new apps should. As s
         <column name="id" type="bigint" size="20" attributes="UNSIGNED" null="false" autoincrement="true" primarykey="true"/>
         <column name="order_no" type="varchar" size="32" null="false" unique="true"/>
         <column name="customer_id" type="bigint" size="20" attributes="UNSIGNED" null="false" index="true"/>
-        <column name="status" type="enum" values="'draft','placed','cancelled'" size="'draft','placed','cancelled'" default="draft" null="false"/>
+        <column name="status" type="enum" values="'draft','placed','cancelled'" default="draft" null="false"/>
         <column name="total" type="decimal" size="12,2" default="0" null="false"/>
         <column name="note" type="text" null="true" charset="utf8mb4" collation="utf8mb4_bin"/>
         <column name="created_at" type="timestamp" default="CURRENT_TIMESTAMP" null="false"/>
@@ -78,8 +78,8 @@ This creates `myapp_orders` and `myapp_order_meta`.
 | --- | --- |
 | `name` | Column name. Required. |
 | `type` | SQL type: `bigint`, `varchar`, `text`, `decimal`, `enum`, `timestamp` and so on. Required. |
-| `size` | Goes in brackets after the type: `255`, `12,2`. |
-| `values` | Enum value list, used by the install path. See the enum note below. |
+| `size` | Goes in brackets after the type: `255`, `12,2`. Ignored for `enum`. |
+| `values` | The value list of an `enum` column, such as `'draft','placed'`. |
 | `attributes` | Raw text placed after the type, such as `UNSIGNED`. |
 | `null` | `true` allows NULL. Anything else means `NOT NULL`. Always set it, see the note below. |
 | `default` | Default value. Numbers, `CURRENT_TIMESTAMP`, `TRUE`, `FALSE` and `NULL` go in unquoted. Anything else is quoted. |
@@ -98,7 +98,7 @@ This creates `myapp_orders` and `myapp_order_meta`.
 </aside>
 
 <aside>
-💡 For an `enum` column, put the same quoted list in both `values` and `size`. The install path reads `values`. Reinit, `create_table`, `add_column` and `update_column` read `size`.
+💡 For an `enum` column, put the quoted list in `values`. Install, reinit and `create_table` all read it from there, and the reinit check ignores spaces after the commas. When you call `add_column` or `update_column` yourself, pass the list as `$size`.
 
 </aside>
 

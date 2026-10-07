@@ -97,11 +97,7 @@ git remote add origin git@github.com:your-org/docloud-app-myapp.git
 git push -u origin main
 ```
 
-The framework's `.gitignore` ignores everything in `dev/`. It doesn't ignore the links your app creates in `apps/`, `api/apps/` and `api/admin/apps/`, so they show up as untracked files in the framework checkout. Add them to that checkout's `.git/info/exclude`, which isn't committed:
-
-```bash
-printf '/apps/myapp\n/api/apps/myapp\n/api/admin/apps/myapp\n' >> .git/info/exclude
-```
+The framework's `.gitignore` ignores everything in `dev/`. In `apps/`, `api/apps/` and `api/admin/apps/` it ignores everything except the system apps that ship with the framework, so the links your app creates never show up in the framework checkout's `git status`. You don't need a `.gitignore` entry for them.
 
 ---
 

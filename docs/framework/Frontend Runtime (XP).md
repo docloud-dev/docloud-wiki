@@ -124,7 +124,7 @@ End the file with the `Router.replace(...)` line, as every framework app does.
 
 The `xp_system` app's route guard reads `meta` on every navigation:
 
-- **`requiresAuth: true`**: a visitor who isn't logged in goes to the login page. A logged-in user goes on only when they hold the permission in `meta.permissions`, checked with `XP.checkPermission()`. Otherwise they go to the dashboard.
+- **`requiresAuth: true`**: a visitor who isn't logged in goes to the login page. A logged-in user goes on only when they hold the permission in `meta.permissions`, checked with `XP.checkPermission()`. Otherwise they go to the dashboard. A user who is refused the dashboard itself gets the error page with a `403` instead.
 - **`requiresAuth: false`**: a public page. The guard adds the `xp-public` class to `body`.
 - **`title`**: becomes the browser tab title.
 

@@ -85,7 +85,7 @@ Most of these are in `.gitignore` already. Don't force-add them.
 - **Runtime data:** `api/db/do.db`, `api/logs/`, `storage/`.
 - **Generated bundles:** `assets/app-scripts.js`, `assets/lib-scripts.js`, `assets/app-styles.css`, `assets/lib-styles.css` and their copies under `api/admin/assets/`. The framework rebuilds them on every request.
 - **Anything in `dev/`.** App code belongs to the app's own repository.
-- **The dev links** in `apps/`, `api/apps/` and `api/admin/apps/`. Add your apps' links to `.git/info/exclude` (see [Dev Workspace](../framework/Building%20Apps/Dev%20Workspace.md)).
+- **Anything else in `apps/`, `api/apps/` and `api/admin/apps/`.** `.gitignore` ignores those folders except for the system apps that ship with the framework, so dev links and locally installed apps stay out of git. Only a new app that ships with the framework needs a `!/<folder>/<app>` line, in each of the three folders it uses.
 - **Secrets:** `.env` files, tokens, private keys and zip exports.
 
 Check `git status` before every commit. If a file you never meant to touch shows up, find out why before you commit it.
@@ -176,10 +176,10 @@ Release from `master`, with everything for the release merged.
 2. **Bump the framework version:**
 
    ```bash
-   ./bump-version 0.0.43
+   ./bump-version 0.0.45
    ```
 
-   It sets the version in the three `.dist` templates, their live copies, the "Current version" line in `README.md`, and turns `## [Unreleased]` in `CHANGELOG.md` into `## [0.0.43] - <today>`. Pass `--date=YYYY-MM-DD` for another date. It writes nothing, and says why, if the version isn't higher than the current one, if `README.md` or `CHANGELOG.md` lacks the line it edits, or if a system app from step 1 still has the old version.
+   It sets the version in the three `.dist` templates, their live copies, the "Current version" line in `README.md`, and turns `## [Unreleased]` in `CHANGELOG.md` into `## [0.0.45] - <today>`. Pass `--date=YYYY-MM-DD` for another date. It writes nothing, and says why, if the version isn't higher than the current one, if `README.md` or `CHANGELOG.md` lacks the line it edits, or if a system app from step 1 is wrong: changed since the last `v*` tag but still at that tag's `<app_version>`, or with an `app-config.json` whose `version` or `release_date` disagrees with its manifest. It lists each app to fix.
 
 3. **Review and commit:**
 

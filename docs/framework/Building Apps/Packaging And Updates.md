@@ -248,7 +248,7 @@ Each release has its version in three places. Change all of them together:
 | `apps/<app>/app-config.json` | `version` and `release_date` |
 | `api/admin/apps/<app>/app-config.json` | `version` and `release_date` |
 
-Nothing checks that they agree, but different parts of the system read different files. The admin panel's app list and the install check use the manifest. The browser gets the `app-config.json` values.
+Nothing checks that they agree for your app (`./bump-version` checks only the framework's own system apps), but different parts of the system read different files. The admin panel's app list and the install check use the manifest. The browser gets the `app-config.json` values.
 
 ```xml
 <info>
