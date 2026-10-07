@@ -16,7 +16,7 @@ This tutorial builds a small todo app from start to finish. When you're done, th
 - a list page that shows every todo, marks one complete or active, and deletes one after a confirmation
 - a form page that adds a todo or edits one
 - an API at `api/todo/<action>` that checks a permission for every action
-- a database table, `todo_items`, created by the framework
+- a database table, `todo_items`, created by a migration
 - a `todo_user` role you can give to users
 
 You start from an installed framework and work in a dev workspace, `dev/todo/`. Every file follows the shape of the built-in `helloworld` app, so open its files next to yours if something is unclear. They are in `api/apps/helloworld/` and `apps/helloworld/`.
@@ -29,6 +29,8 @@ dev/
         backend/
             todo/
                 todo.xml                   the manifest
+                migrations/
+                    20261007120000_create_items.php   creates the table
                 todo.class.php             the app class
                 todoModel.class.php        one todo, and its validation
                 todoDAO.class.php          database reads and writes
@@ -150,21 +152,6 @@ Create `dev/todo/backend/todo/todo.xml`:
             <grant app="auth" actions="logout"/>
         </role>
     </roles>
-
-    <!-- Created as todo_items -->
-    <createTables>
-        <table name="items">
-            <column name="id" type="bigint" size="20" default="" attributes="UNSIGNED" null="false" autoincrement="true" primarykey="true"/>
-            <column name="title" type="varchar" size="255" default="" attributes="" null="false"/>
-            <column name="description" type="text" size="" default="" attributes="" null="true"/>
-            <column name="status" type="varchar" size="20" default="active" attributes="" null="false"/>
-            <column name="priority" type="varchar" size="20" default="normal" attributes="" null="false"/>
-            <column name="created_date" type="datetime" size="" default="" attributes="" null="false"/>
-            <column name="created_by" type="bigint" size="20" default="" attributes="UNSIGNED" null="true"/>
-            <column name="updated_date" type="datetime" size="" default="" attributes="" null="true"/>
-            <column name="updated_by" type="bigint" size="20" default="" attributes="UNSIGNED" null="true"/>
-        </table>
-    </createTables>
 </app>
 ```
 
@@ -173,11 +160,50 @@ What each part does:
 - **`<info>`**: the app's identity. The admin panel's **Apps** page shows it. `<api_version>` is the lowest framework version the app supports. `<app_type>` is any value except `system_app`, which is reserved for apps that ship with the framework.
 - **`<user_permissions name="todo">`**: the name must be the controller name, the `todo` in `api/todo/<action>`. Each `<permission name>` must be an action your controller handles. The framework checks `todo/<action>` on every request. `auto_update="true"` grants the permission to the `system_admin` role when the app is reinitialized.
 - **`<roles>`**: creates the `todo_user` role with every `todo` permission (`*`) and `auth/logout`, so you don't have to tick them on the Roles page.
-- **`<createTables>`**: table names get the app's name as a prefix, so `items` becomes `todo_items`. Write every column attribute, even when it's empty, as `helloworld` does.
+The manifest has no `<createTables>`: the table comes from a migration, next.
 
 The file must be valid XML. Use `<!-- -->` comments only. A manifest that doesn't parse is skipped without an error on screen.
 
-See [App Manifest](./Building%20Apps/App%20Manifest.md) for every element, [Roles And Permissions](./Essentials/Roles%20And%20Permissions.md) for permissions and roles, and [App Manager](./Modules/App%20Manager.md) for the column attributes.
+See [App Manifest](./Building%20Apps/App%20Manifest.md) for every element, and [Roles And Permissions](./Essentials/Roles%20And%20Permissions.md) for permissions and roles.
+
+### The table
+
+Create `dev/todo/backend/todo/migrations/20261007120000_create_items.php`. The number at the front is the date and time you write it, `YYYYMMDDHHMMSS`, so migrations run in the order you wrote them:
+
+```php
+<?php
+
+return new class extends Migration {
+    public function up(): void
+    {
+        $this->execute(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS todo_items (
+                id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+                title varchar(255) NOT NULL,
+                description text NULL,
+                status varchar(20) NOT NULL DEFAULT 'active',
+                priority varchar(20) NOT NULL DEFAULT 'normal',
+                created_date datetime NOT NULL,
+                created_by bigint(20) UNSIGNED NULL,
+                updated_date datetime NULL,
+                updated_by bigint(20) UNSIGNED NULL,
+                PRIMARY KEY (id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            SQL);
+    }
+
+    public function down(): void
+    {
+        $this->dropTableIfExists('todo_items');
+    }
+};
+```
+
+- Name the table `todo_items`, with the app's name as a prefix. Migrations don't add it for you.
+- `up()` creates the table. `down()` drops it, for a rollback.
+- Once the app is linked (Step 10), `php api/migrate.php make todo <name>` writes a new migration like this one, with the current time in its name.
+
+The migration runs when you reinitialize the app in Step 11. See [Database Migrations](./Building%20Apps/Database%20Migrations.md) for more.
 
 ## Step 6: Write the app class
 
@@ -737,11 +763,13 @@ Two things don't exist yet: the `todo_items` table and the permission grants. Bo
 
 The reinitialize:
 
-- creates `todo_items` from `<createTables>`
+- runs the migration, which creates `todo_items`
 - grants every `auto_update="true"` permission to the `system_admin` role
 - creates the `todo_user` role from `<roles>` with its grants, plus `dashboard/view`
 
-Reinitialize again whenever you change `<createTables>`, the permissions or `<roles>`. A reinitialize only adds: it never drops a table or column, and never takes back a grant. The Roles page lists new permissions straight away, but they're granted only by the reinitialize.
+Reinitialize again whenever you add a migration or change the permissions or `<roles>`. Each migration runs once, so to change the table later, add a new migration rather than editing this one. A reinitialize never takes back a grant. The Roles page lists new permissions straight away, but they're granted only by the reinitialize.
+
+If the reinitialize says `Migration 20261007120000_create_items failed: …`, fix the SQL and reinitialize again. A failed migration isn't recorded, so it runs again.
 
 See [How to install and reinitialise an app](./Modules/App%20Manager.md) in App Manager for exactly what runs.
 
@@ -1373,7 +1401,7 @@ To grant only some actions, change the role's grants on the **Permissions** tab,
 
 **Every app's routes disappeared.** A script in `assets/app-scripts.js` has an error. Open the browser console. The usual cause is a syntax error in a `route.js`, or two apps declaring the same top-level name.
 
-**Database errors in the log.** The table doesn't exist until you reinitialize. A query that names `items` instead of `todo_items` also fails.
+**Database errors in the log.** The table doesn't exist until you reinitialize. Check the migration's status with `php api/migrate.php status todo`. A query that names `items` instead of `todo_items` also fails.
 
 ---
 
@@ -1381,7 +1409,8 @@ To grant only some actions, change the role's grants on the **Permissions** tab,
 
 | File | Read by | When |
 | --- | --- | --- |
-| `todo.xml` | Dev links, Apps page, app boot, permission checks, reinitialize | Every request. Tables, grants and roles only on reinitialize |
+| `todo.xml` | Dev links, Apps page, app boot, permission checks, reinitialize | Every request. Grants and roles only on reinitialize |
+| `migrations/*.php` | Reinitialize, install, `api/migrate.php` | Each one once, on the first reinitialize after you add it |
 | `todo.class.php` | App boot, global search | Every request |
 | `todoController.class.php` | The API, for `api/todo/<action>` | Every API request to the app |
 | `todoModel.class.php`, `todoDAO.class.php` | Your controller | When the controller uses them |
