@@ -46,21 +46,23 @@ The overall flow:
  cron / terminal
  php api/shell.php myapp rebuild_index ─────────────────────────► Framework::run_shell()
  php api/heartbeat.php ─────────────────────────────────────────► Framework::run_heartbeat()
+ php api/migrate.php status myapp ──────────────────────────────► Framework::run_migrate()
 ```
 
 ---
 
 # How the framework runs
 
-The backend has three entry points. All three first call `ConfigTemplates::sync()`, which creates or updates the live config files (`api/config.xml`, `xp-config.json` and `api/admin/xp-config.json`) from their `.dist` templates. See [Configuration Files](Essentials/Configuration%20Files.md).
+The backend has four entry points. All four first call `ConfigTemplates::sync()`, which creates or updates the live config files (`api/config.xml`, `xp-config.json` and `api/admin/xp-config.json`) from their `.dist` templates. See [Configuration Files](Essentials/Configuration%20Files.md).
 
 | Mode | Entry point | Boots with | Used for |
 | --- | --- | --- | --- |
 | HTTP | `api/index.php` → `api/core/init.php` | `Framework::run()` | Every API call from the browser |
 | Shell | `api/shell.php` → `api/core/shell_init.php` | `Framework::run_shell()` | Running a controller action from a terminal or cron job |
 | Heartbeat | `api/heartbeat.php` → `api/core/heartbeat_init.php` | `Framework::run_heartbeat()` | The scheduler, called by cron once a minute |
+| Migrate | `api/migrate.php` → `api/core/migrate_init.php` | `Framework::run_migrate()` | App database migrations. See [Database Migrations](Building%20Apps/Database%20Migrations.md) |
 
-The shell and heartbeat entry points run only when `is_shell()` is true, which means the command line (or a CGI SAPI). Called through a normal web server module they stop with "Not Authorized to call via ...".
+The shell and heartbeat entry points run only when `is_shell()` is true, which means the command line (or a CGI SAPI). Called through a normal web server module they stop with "Not Authorized to call via ...". The migrate entry point is stricter: it also refuses a CGI request, and exits with `1`.
 
 ## HTTP
 

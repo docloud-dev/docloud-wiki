@@ -24,7 +24,7 @@ Different parts of the framework read different elements, at different times. So
 | `<roles>` | No | Reinit | On reinit |
 | `<user_notifications>` | No | Admin notification settings, package install | Settings list: at once. Role defaults: at package install or update |
 | `<app_options>` | No | Install, reinit, option reads | Declarations: at once. New options are seeded on reinit |
-| `<createTables>` | No | Install, reinit, app removal | On install or reinit |
+| `<createTables>` | No | Install, reinit, app removal. Ignored once the app has migrations | On install or reinit |
 | `<autoload>` | No | Class autoloader, app boot | On the next request |
 | `<dependencies>` | No | App boot | On the next request |
 | `<run>` | No | Reinit, package install | On every reinit |
@@ -447,6 +447,8 @@ Provisioned on every reinit, and only adds: a grant an admin revoked stays revok
 **Optional.** This is how an app declares its tables. Each `<table name>` becomes `<app>_<name>`. Install creates the tables. Every reinit converges them: it adds missing tables, columns and keys, and alters changed columns. It never drops or renames anything. When an admin removes the app and ticks the option to remove its tables, the tables listed here are dropped.
 
 [How to define your tables](../Modules/App%20Manager.md) lists every `<table>` and `<column>` attribute, and [initialize_app](../Modules/App%20Manager.md#initialize_app) covers how changes converge.
+
+An app can keep its schema in migrations instead, and new apps should. An app with any migration file ignores `<createTables>`. See [Database Migrations](./Database%20Migrations.md).
 
 ---
 

@@ -33,6 +33,8 @@ Two rules apply to every `AppManager` table helper:
 
 Declare tables in the `<createTables>` block of your manifest, `api/apps/myapp/myapp.xml`. The framework creates them when the app is installed and converges them on every reinit.
 
+An app can keep its schema in migration files instead, and new apps should. As soon as an app has one migration, its `<createTables>` is ignored. See [Database Migrations](../Building%20Apps/Database%20Migrations.md).
+
 ```xml
 <createTables charset="utf8mb4" collation="utf8mb4_unicode_ci">
     <table name="orders">
@@ -104,7 +106,7 @@ This creates `myapp_orders` and `myapp_order_meta`.
 
 # How to install and reinitialise an app
 
-Installing an app from the admin panel calls `AppManager::installSchema($app_name)`. That builds every table in `<createTables>` with `generateTableFromXml()`.
+Installing an app from the admin panel calls `AppManager::installSchema($app_name)`. For an app with migrations, that runs every migration. Otherwise it builds every table in `<createTables>` with `generateTableFromXml()`.
 
 Reinitialising an app (Admin panel > Apps > Reinit, or after a system update) calls `AppManager::initialize_app($app_name)`. You can also call it yourself:
 
@@ -115,14 +117,14 @@ $result = AppManager::initialize_app('myapp');
 `initialize_app` does this, in order:
 
 1. Uses the app name you pass, or the calling app if you pass none.
-2. Converges the tables in `<createTables>` with the database. The next section has the rules.
+2. Builds the schema. An app with migrations runs its pending ones (see [Database Migrations](../Building%20Apps/Database%20Migrations.md)). Any other app has the tables in `<createTables>` converged with the database. The next section has the rules.
 3. Seeds the app's `<app_options>` (see [App Options](../Essentials/App%20Options.md)).
 4. Registers permissions. Every permission marked `auto_update="true"` in `<user_permissions>` is added to the admin role in the app, and every one in `<admin_panel_permissions>` is added to the admin panel. This only adds: it never removes a permission an admin granted by hand.
 5. Provisions the roles declared in the manifest's `<roles>` block and their default grants. This only adds. A grant an admin revoked stays revoked.
 6. Downgrades role memberships whose scope no longer exists.
 7. Runs the `<run>` block: each `<script class_name="…" function_name="…" file="…"/>` and `<sql>…</sql>` entry (see `runConfig`).
 
-It returns an array with the keys `roles`, `scopes_pruned` and `scripts_runed`, or `false` if an exception stops it. The array doesn't report which tables or columns changed.
+It returns an array with the keys `roles`, `scopes_pruned` and `scripts_runed`, plus `migrations` for an app with migrations, or `false` if an exception stops it. A failed migration doesn't stop the later steps: `migrations` holds the result, and the admin panel's Reinitialize reports `Migration <name> failed: <error>`. The array doesn't report which `<createTables>` tables or columns changed. `syncTablesFromXml` does.
 
 ---
 
@@ -140,7 +142,7 @@ For each `<table>` in `<createTables>`, `initialize_app` works on `<app>_<name>`
   - `on_update` and column `charset` aren't compared. They're applied when the column is added, or when one of the checks above triggers a rewrite.
 - **Keys**: adds any column `unique`, table `<unique>` or column `index` key whose name doesn't exist yet.
 
-Reinit never drops or renames anything. It doesn't drop tables, columns, indexes or unique keys. It doesn't change the primary key. A column you rename in the manifest is added as a new column, and the old one stays. To remove something, do it yourself with a `<run>` SQL file or script.
+Reinit never drops or renames anything. It doesn't drop tables, columns, indexes or unique keys. It doesn't change the primary key. A column you rename in the manifest is added as a new column, and the old one stays. To rename or remove something, move the app to [migrations](../Building%20Apps/Database%20Migrations.md), or do it yourself with a `<run>` SQL file or script.
 
 ---
 
@@ -964,7 +966,7 @@ $result = AppManager::initialize_app('myapp');
 
 **Return Value:**
 
-- **`Array`**: Keys `roles`, `scopes_pruned` and `scripts_runed`.
+- **`Array`**: Keys `roles`, `scopes_pruned` and `scripts_runed`, and `migrations` (the run's result: `ran`, `failed`, `error`, `skipped`, `warnings`) for an app with migrations.
 - **`false`** if an exception stops it.
 
 ---
@@ -973,7 +975,7 @@ $result = AppManager::initialize_app('myapp');
 
 Description:
 
-The **`installSchema`** method builds an app's tables at install time from `<createTables>`, using `generateTableFromXml`.
+The **`installSchema`** method builds an app's tables at install time. An app with migrations runs them all. Any other app gets its `<createTables>` tables, through `generateTableFromXml`.
 
 Syntax:
 
@@ -987,7 +989,30 @@ $ok = AppManager::installSchema('myapp');
 
 **Return Value:**
 
-- **`Boolean`**: `false` when the app has no tables to build. It's `true` otherwise, even if some tables failed: check the log, or call `generateTableFromXml` for per-table results.
+- **`Boolean`**: For an app with migrations, `false` when a migration failed. For any other app, `false` when it has no tables to build, and `true` otherwise, even if some tables failed: check the log, or call `generateTableFromXml` for per-table results.
+
+---
+
+### syncTablesFromXml
+
+Description:
+
+The **`syncTablesFromXml`** method runs only the table step of `initialize_app` for an app on `<createTables>`: it creates missing tables and converges columns, keys and collation, as described in "How schema changes converge on reinit". It doesn't seed options, register permissions, provision roles or run `<run>`. It compares `SHOW CREATE TABLE` before and after to report what changed. The admin panel's **Sync tables** action calls it.
+
+Syntax:
+
+```php
+$report = AppManager::syncTablesFromXml('myapp');
+// ['created' => [], 'changed' => ['myapp_orders'], 'unchanged' => ['myapp_order_meta'], 'missing' => []]
+```
+
+**Parameters:**
+
+- **`$app_name`**: App name.
+
+**Return Value:**
+
+- **`Array`**: Full table names under `created`, `changed`, `unchanged` and `missing` (declared, but still not there afterwards). A change to only the `AUTO_INCREMENT` counter doesn't count.
 
 ---
 
@@ -1525,6 +1550,29 @@ $exists = $db->check_table_exist('myapp_orders');
 **Return Value:**
 
 - **`Boolean`**
+
+---
+
+### show_create_table
+
+Description:
+
+The **`show_create_table`** method returns a table's `SHOW CREATE TABLE` statement.
+
+Syntax:
+
+```php
+$ddl = $db->show_create_table('myapp_orders');
+```
+
+**Parameters:**
+
+- **`$table_name`**: Full table name.
+
+**Return Value:**
+
+- **`String`**: The `CREATE TABLE` statement.
+- **`null`** if the table doesn't exist.
 
 ---
 

@@ -60,3 +60,9 @@ Admin Pages explains how to add pages for an app to the admin panel. It covers t
 Packaging And Updates covers getting an app onto other systems: exporting it from the admin panel, installing it from an export, a repository zip or the DoCloud App Library, and how an update merges the new manifest with the installed one. It also covers version fields, reinitializing and removing an app.
 
 ---
+
+## Database Migrations
+
+Database Migrations explains how an app keeps its schema in PHP migration files instead of `<createTables>`. It covers when migrations run and how they're recorded, writing `up()` and `down()`, converting an existing app with a baseline, rolling back and resetting, the `php api/migrate.php` command, and the admin panel's Migrations page.
+
+---

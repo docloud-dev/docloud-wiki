@@ -185,7 +185,7 @@ An app installed into `dev/` isn't a git repository. Run `git init` in `dev/<app
 1. If the app is installed, merges the packaged manifest and both `app-config.json` files with the installed ones (next section).
 2. Copies the package's `backend/`, `adminpanel/` and `frontend/` folders over the target folders. Files are added and overwritten, never deleted, so a file that a new release dropped stays on the system.
 3. For a `dev/` install, creates the links.
-4. Creates each `<createTables>` table that doesn't exist yet (`CREATE TABLE IF NOT EXISTS`). Existing tables aren't changed.
+4. Creates each `<createTables>` table that doesn't exist yet (`CREATE TABLE IF NOT EXISTS`). Existing tables aren't changed. An app with migrations runs its pending migrations here instead (see [Database Migrations](./Database%20Migrations.md)).
 5. Seeds the app's `<app_options>`.
 6. Runs the `<run>` SQL file from the package's `database/` folder, and the `<run>` script.
 7. Sets the app's entry in the admin panel permission set to the `auto_update` admin permissions in `config.xml`.
@@ -274,7 +274,7 @@ Nothing checks that they agree, but different parts of the system read different
 Open **Apps > Installed Apps**, open the app and click the delete icon. The confirmation has one option, **Remove database records and tables**.
 
 - **Unticked**: the app's files are deleted. Its tables and data stay in the database, and are used again if you reinstall the app.
-- **Ticked**: each table in `<createTables>` (`<app>_<name>`) is dropped as well. This can't be undone.
+- **Ticked**: each table in `<createTables>` (`<app>_<name>`) is dropped as well. This can't be undone. An app with migrations is reset instead, and its migrations without a `down()` leave their tables in place (see [Database Migrations](./Database%20Migrations.md)).
 
 Removal also runs the meta cleanup in the manifest's `<uninstallConfiguration>`. It doesn't remove the app's grants from roles or from the admin panel permission set.
 

@@ -15,7 +15,7 @@ Modules are the framework's reusable backend toolkits. They live in `api/core/Mo
 
 ## App Manager
 
-App Manager is how an app works with the framework: table helpers that prefix table names with the app's name, schema install and reinitialization from `<createTables>`, calls into other apps with `CreateAppInstance`, autoloading and the app boot order. It also covers the lower-level schema functions and editing an app's manifest from code.
+App Manager is how an app works with the framework: table helpers that prefix table names with the app's name, schema install and reinitialization from `<createTables>` or from [migrations](../Building%20Apps/Database%20Migrations.md), calls into other apps with `CreateAppInstance`, autoloading and the app boot order. It also covers the lower-level schema functions and editing an app's manifest from code.
 
 ---
 

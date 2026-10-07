@@ -125,7 +125,7 @@ printf '/apps/myapp\n/api/apps/myapp\n/api/admin/apps/myapp\n' >> .git/info/excl
    - If a real folder (not a link) is already at that path, it leaves it alone and doesn't link the dev copy.
    - Otherwise it creates the link. Links use absolute paths.
 
-Only API requests create links. The page itself (`index.php`) doesn't, and neither do command-line runs (`api/shell.php`, `api/heartbeat.php`): on the command line the web server's document root is empty, so the framework can't find `dev/`. After you add a new app to `dev/`, load the site once and then reload it. The first load collects frontend files before its API calls have created the links.
+Only API requests create links. The page itself (`index.php`) doesn't, and neither do command-line runs (`api/shell.php`, `api/heartbeat.php`, `api/migrate.php`): on the command line the web server's document root is empty, so the framework can't find `dev/`. After you add a new app to `dev/`, load the site once and then reload it. The first load collects frontend files before its API calls have created the links.
 
 <aside>
 ⚠️ A real folder blocks the link. If `api/apps/myapp/` is a normal folder, for example because the app was installed earlier from the admin panel, the framework keeps using that folder and ignores `dev/myapp/` without any error. Move the real folder out of the way first.
