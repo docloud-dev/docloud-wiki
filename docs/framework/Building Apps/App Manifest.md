@@ -527,7 +527,22 @@ Give each prerequisite its own element name, such as the app's name. Two entries
 
 ```xml
 <uninstallConfiguration>
+    <apps>
+        <xp_users>
+            <cleanup>
+                <database>
+                    <meta_key>myapp_last_order</meta_key>
+                    <meta_key>myapp_favourites</meta_key>
+                </database>
+            </cleanup>
+        </xp_users>
+    </apps>
 </uninstallConfiguration>
 ```
 
-**Optional.** No code reads it in 0.0.42. Removing an app is controlled by the options the admin picks in the admin panel. You can leave the element empty or leave it out.
+**Optional.** Meta data this app stored in other apps' meta tables, to delete when the app is removed. Each child of `<apps>` is named after the app that holds the data. For each `<meta_key>`, removal calls that app's `remove_meta_data($meta_key)`, through `CreateAppInstance`, so the holding app must define that method and allow this app to call it (see `<app_permissions>`). The cleanup runs on every removal, whether or not the admin ticks the option to remove the tables. You can leave the element empty or leave it out.
+
+<aside>
+⚠️ A `<database>` with a single `<meta_key>` is skipped without an error. The cleanup only reads a list of two or more.
+
+</aside>
